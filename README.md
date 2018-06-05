@@ -67,3 +67,5 @@ git add .
 git commit -m "poruka"
 git push origin master ( ili heroku master, provera na: git remote -v )
 heroku config:set DEBUG_COLLECTSTATIC=0
+
+na sve ovo manage.py collectstatic!!!!
