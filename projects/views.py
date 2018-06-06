@@ -280,9 +280,10 @@ def index(request):
         poslovi = Poslovi.objects.all()
         radnici = Radnik.objects.all()
         for posao in poslovi:
-            proslo_dana = posao.kraj_radova - current_date
-            if proslo_dana.days < -730:
-                poslovi_zavrseni_pre_vise_od_dve_godine.append(posao)
+            if posao.kraj_radova != None:
+                proslo_dana = posao.kraj_radova - current_date
+                if proslo_dana.days < -730:
+                    poslovi_zavrseni_pre_vise_od_dve_godine.append(posao)
         if len(poslovi_zavrseni_pre_vise_od_dve_godine) > 0:
             messages.success(request, "U bazi su poslovi stariji od dve godine!")
         return render(request, 'projects/index.html', {

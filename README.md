@@ -68,4 +68,10 @@ git commit -m "poruka"
 git push origin master ( ili heroku master, provera na: git remote -v )
 heroku config:set DEBUG_COLLECTSTATIC=0
 
-na sve ovo manage.py collectstatic!!!!
+
+SSH key za firewall
+
+$ssh-keygen -t rsa
+$heroku keys:clear
+$heroku keys:add 
+$git clone git@heroku.com:my-app.git -o heroku
