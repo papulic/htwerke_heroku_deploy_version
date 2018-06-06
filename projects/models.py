@@ -30,7 +30,7 @@ class Zanimanja(models.Model):
 
 class Radnik(models.Model):
     ime = models.CharField(max_length=50)
-    oib = models.IntegerField()
+    oib = models.CharField(max_length=50)
     broj_telefona = models.CharField(max_length=30, blank=True)
     broj_odela = models.IntegerField(default=None, null=True, blank=True)
     broj_cipela = models.IntegerField(default=None, null=True, blank=True)
@@ -54,7 +54,7 @@ class Radnik(models.Model):
 
 class Vozilo(models.Model):
     marka = models.CharField(max_length=30)
-    predjeni_kilometri = models.IntegerField(default=None, null=True, blank=True)
+    predjeni_kilometri = models.CharField(max_length=50, null=True, blank=True)
     registracija_istice = models.DateField()
     sledeci_servis = models.DateField(null=True, blank=True)
     potrosnja_goriva = models.FloatField(max_length=10, default=0.0)
