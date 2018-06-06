@@ -75,3 +75,10 @@ $ssh-keygen -t rsa
 $heroku keys:clear
 $heroku keys:add 
 $git clone git@heroku.com:my-app.git -o heroku
+
+UPDATE baze
+
+https://gist.github.com/zulhfreelancer/8d3ab87649372984ba0bba8efb067c46
+
+https://elements.heroku.com/addons/heroku-postgresql
+
