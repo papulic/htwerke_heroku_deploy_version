@@ -37,7 +37,7 @@ def pdf_posao(request, posao_id):
         # Create the PDF object, using the response object as its "file."
         p = canvas.Canvas(response)
         # pagesize=(595.27,841.89)
-        # Draw things on the PDF. Here's where the PDF generation happens.
+        # Draw things on the PDF. Here's where the PDF generation happens...
         # See the ReportLab documentation for the full list of functionality.
         prvi_red = "{posao} - {opis}".format(posao=posao.ime, opis=posao.opis)
         drugi_red = "{pd} - {kd}  Dogovoreno na radni sat: {sat}, dogovoreno po kvadratu: {kv}".format(pd=posao.pocetak_radova.strftime('%d.%m.%Y'), kd=posao.kraj_radova.strftime('%d.%m.%Y'), sat=posao.dogovoreni_radni_sati, kv=posao.dogovoreno_po_kvadratu)
