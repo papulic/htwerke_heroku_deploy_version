@@ -37,7 +37,7 @@ def pdf_posao(request, posao_id):
         # Create the PDF object, using the response object as its "file."
         p = canvas.Canvas(response)
         # pagesize=(595.27,841.89)
-        # Draw things on the PDF. Here's where the PDF generation happens...
+        # Draw things on the PDF. Here's where the PDF generation happens.
         # See the ReportLab documentation for the full list of functionality.
         prvi_red = "{posao} - {opis}".format(posao=posao.ime, opis=posao.opis)
         drugi_red = "{pd} - {kd}  Dogovoreno na radni sat: {sat}, dogovoreno po kvadratu: {kv}".format(pd=posao.pocetak_radova.strftime('%d.%m.%Y'), kd=posao.kraj_radova.strftime('%d.%m.%Y'), sat=posao.dogovoreni_radni_sati, kv=posao.dogovoreno_po_kvadratu)
@@ -263,6 +263,10 @@ def posao_delete(request, posao_id):
         messages.success(request, "Posao {posao} još nije završen, posao možete obrisati tek kada posao ima datum kraja radova!".format(
                              posao=posao.ime))
         return HttpResponseRedirect(reverse('projects:index'))
+
+
+def sajt(request):
+    return render(request, 'projects/sajt.html')
 
 
 def index(request):
@@ -999,7 +1003,7 @@ def login_user(request):
         if user is not None:
             if user.is_active:
                 login(request, user)
-                return HttpResponseRedirect('/')
+                return HttpResponseRedirect('/administracija')
             else:
                 return render(request, 'projects/login.html', {'error_message': 'Nalog je deaktiviran'})
         else:

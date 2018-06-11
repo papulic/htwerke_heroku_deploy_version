@@ -18,7 +18,7 @@ from django.contrib import admin
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^administracija/', include('projects.urls')),
+    # url(r'^administracija/', include('projects.urls')),
     url(r'^', include('projects.urls')), # posle je moguce ubaciti sajt na ovoj adresi, druga aplikacija
 ]
 admin.site.site_header = "HT WERKE admin"
