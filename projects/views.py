@@ -264,6 +264,12 @@ def posao_delete(request, posao_id):
                              posao=posao.ime))
         return HttpResponseRedirect(reverse('projects:index'))
 
+def radnik_delete(request, radnik_id):
+    radnik = Radnik.objects.get(id=radnik_id)
+    radnik.delete()
+    messages.success(request, "Radnik {radnik} je uspešno obrisan iz baze!".format(radnik=radnik.ime))
+    return HttpResponseRedirect(reverse('projects:ljudi'))
+
 
 def sajt(request):
     return render(request, 'projects/sajt.html')

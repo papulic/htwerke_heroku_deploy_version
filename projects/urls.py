@@ -35,6 +35,7 @@ urlpatterns = [
     url(r'^administracija/(?P<project_id>[0-9]+)/obrisi_rashod/(?P<rashod_id>[0-9]+)/$', views.rashod_delete, name='rashod-delete'),
     url(r'^administracija/(?P<project_id>[0-9]+)/obrisi_komentar/(?P<komentar_id>[0-9]+)/$', views.komentar_delete, name='komentar-delete'),
     url(r'^administracija/obrisi_posao/(?P<posao_id>[0-9]+)/$', views.posao_delete, name='posao-delete'),
+    url(r'^administracija/obrisi_radnika/(?P<radnik_id>[0-9]+)/$', views.radnik_delete, name='radnik-delete'),
     url(r'^administracija/biranje_meseca/$', views.biranje_meseca, name='biranje_meseca'),
     url(r'^administracija/biranje_meseca_finansije/$', views.biranje_meseca_za_finansije, name='biranje_meseca_finansije'),
     url(r'^administracija/dodaj_dane/(?P<mesec>[0-9]+)/(?P<godina>[0-9]+)/(?P<posao_id>[a-zA-Z0-9_.-]+)$', views.dodaj_dane, name='dodaj_dane'),

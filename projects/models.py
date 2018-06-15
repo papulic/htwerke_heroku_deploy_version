@@ -71,7 +71,7 @@ class Vozilo(models.Model):
 class Dan(models.Model):
     datum = models.DateField()
     radnik = models.ForeignKey(Radnik, on_delete=models.CASCADE)
-    posao = models.ForeignKey(Poslovi, null=True, blank=True)
+    posao = models.ForeignKey(Poslovi, null=True, blank=True, on_delete=models.SET_NULL)
     radio_sati = models.FloatField(max_length=10, default=0.0)
     ishrana = models.FloatField(max_length=10, default=0.0)
     bolovanje = models.BooleanField(default=False)
