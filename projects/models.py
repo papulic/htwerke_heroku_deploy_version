@@ -59,7 +59,7 @@ class Vozilo(models.Model):
     sledeci_servis = models.DateField(null=True, blank=True)
     potrosnja_goriva = models.FloatField(max_length=10, default=0.0)
     opis = models.CharField(max_length=100, blank=True)
-    trenutno_duzi = models.ForeignKey(Radnik, null=True, blank=True)
+    trenutno_duzi = models.ForeignKey(Radnik, null=True, blank=True, on_delete=models.SET_NULL)
 
     def __unicode__(self):
         return self.marka
