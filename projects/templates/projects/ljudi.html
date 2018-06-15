@@ -121,18 +121,26 @@
                     <th>Ime</th>
                     <th>oib</th>
                     <th>Zanimanja</th>
+                    <th></th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for radnik in radnici_otkaz %}
                     <tr class="danger">
-                        <td><a href="{% url 'projects:radnik-update' radnik.id %}">
+                        <td><a href="{% url 'projects:radnik-detail' radnik.id %}">
                                 <button type="button" class="btn btn-link">
                                     <span class="glyphicon glyphicon-user"></span>&nbsp; {{ radnik.ime }}
                                 </button>
                             </a></td>
                         <td>{{ radnik.oib }}</td>
                         <td>* {% for j in radnik.zanimanja.all %}{{ j }} * {% endfor %}</td>
+                        <td>
+                            <a href="{% url 'projects:radnik-delete' radnik.id %}">
+                                <button type="button" class="btn btn-danger" onclick="clicked(event)">
+                                    <span class="glyphicon glyphicon-remove"></span>&nbsp; Obriši
+                                </button>
+                            </a>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -141,6 +149,12 @@
     </div>
 {% endif %}
 </div>
+<script>
+function clicked(e)
+{
+    if(!confirm('Ako obrišete radnika, obrisaće se svi dani koji su vezani za ovog radnika! Obrisati?'))e.preventDefault();
+}
+</script>
 {% endblock %}
 
 
