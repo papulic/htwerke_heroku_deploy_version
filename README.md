@@ -55,8 +55,8 @@ mozda sve objekte starije od tri godine?
 - onemoguceno dodavanje na posao kroz objekat radnih, dakle MOOORA kroz posao...!!!!!!
 - Ako je datum veci od kraja projekta, radnici se ne mogu dodati vise!
 - Posao se ne moze obrisati ako nije postavljen datum na kraj projekta
-- Brisanjem projekta se brisu svi dani, prihodi, rashodi vezani za taj projekat!!
-- Kad se obrise posao, nece se vise precizno videti taj mesec za radnike..
+- Brisanjem projekta se brisu svi prihodi, rashodi vezani za taj projekat!!
+- Brisanjem radnika se brisu svi dani vezani za radnika!
 
 
 heroku auth:token
@@ -75,10 +75,3 @@ $ssh-keygen -t rsa
 $heroku keys:clear
 $heroku keys:add 
 $git clone git@heroku.com:my-app.git -o heroku
-
-UPDATE baze
-
-https://gist.github.com/zulhfreelancer/8d3ab87649372984ba0bba8efb067c46
-
-https://elements.heroku.com/addons/heroku-postgresql
-
