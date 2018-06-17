@@ -42,6 +42,13 @@
         </a>
         </div>
     </div>
+    <div class="row">
+        <a href="{% url 'projects:pdf_radnici_mesecni_izvestaj' mesec godina posao_id %}">
+            <button type="button" class="btn btn-info">
+                <span class="glyphicon glyphicon-pencil"></span>&nbsp; Napravi pdf izveštaj za {{ mesec }}.{{ godina }}
+            </button>
+        </a>
+    </div>
     <hr style="height:1px;border:none;color:#333;background-color:#333;" />
     {% for radnik in radnici %}
     <table class="table">

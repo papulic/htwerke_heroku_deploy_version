@@ -25,6 +25,9 @@
                 <thead>
                 <tr>
                     <th>Posao</th>
+                    <th>Radnih sati ukupno</th>
+                    <th>Dana smeštaja</th>
+                    <th>Smeštaj finansijski</th>
                     <th>Prihodi</th>
                     <th>Rashodi</th>
                     <th>Dobit</th>
@@ -39,6 +42,21 @@
                             </button>
                         </a>
                     </td>
+                    {% for k, v in radnih_sati.items %}
+                    {% if k == posao.id %}
+                    <td>{{ v }}</td>
+                    {% endif %}
+                    {% endfor %}
+                    {% for k, v in dana_smestaja.items %}
+                    {% if k == posao.id %}
+                    <td>{{ v }}</td>
+                    {% endif %}
+                    {% endfor %}
+                    {% for k, v in smestaj_finansijski.items %}
+                    {% if k == posao.id %}
+                    <td>{{ v }}</td>
+                    {% endif %}
+                    {% endfor %}
                     {% for k, v in mesecni_prihodi.items %}
                     {% if k == posao.id %}
                     <td>{{ v }}</td>
@@ -58,6 +76,9 @@
                 {% endfor %}
                 <tr>
                     <td><strong>Ukupno:</strong></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                     <td><strong>{{ ukupni_prihodi }}</strong></td>
                     <td><strong>{{ ukupni_rashodi }}</strong></td>
                     <td><strong>{{ ukupna_dobit }}</strong></td>

@@ -70,6 +70,7 @@
             <div class="row">
                 <h3>opis: {{ posao.opis }}</h3>
                 <h4>Svi do sada uneti radni sati za sve radnike koji su na projektu: {{ radni_sati_svih_radnika }}</h4>
+                <h4>Svi do sada uneti dani smestaja za sve radnike koji su na projektu: {{ dana_smestaja_svih_radnika }}</h4>
             </div>
          </div>
          <h3>Finansije</h3>
@@ -220,11 +221,9 @@
              {% if dostupni_radnici %}
              <hr>
              {% for radnik in filter.qs %}
-             {% if radnik.dostupan == True %}
              <li><input type='checkbox' name='listdodaj' value='{{radnik.id}}' id='{{radnik.id}}' />
                  <span><label class='list' for='{{radnik.id}}'>{{radnik.ime.upper}} - * {% for j in radnik.zanimanja.all %}{{ j }} * {% endfor %}</label></span>
              </li>
-             {% endif %}
              {% endfor %}
              <button type="submit" class="btn btn-success"><span class="glyphicon glyphicon-plus-sign"></span> Dodaj na projekat</button>
              {% else %}

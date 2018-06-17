@@ -101,8 +101,8 @@
                         ---------------------
                         {% endif %}</td>
                         <td>{{ radnik.satnica }} kn</td>
-                        <td {% if radnik.dana_do_isteka_ugovora < 15 %}style="color:red"{% endif %}>{{ radnik.ugovor_vazi_do }}</td>
-                        <td {% if radnik.dana_do_isteka_ugovora < 15 %}style="color:red"{% endif %}>{{ radnik.dana_do_isteka_ugovora }}</td>
+                        <td {% if radnik.dana_do_isteka_ugovora < 30 %}style="color:red"{% endif %}>{{ radnik.ugovor_vazi_do }}</td>
+                        <td {% if radnik.dana_do_isteka_ugovora < 30 %}style="color:red"{% endif %}>{{ radnik.dana_do_isteka_ugovora }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

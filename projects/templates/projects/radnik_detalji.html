@@ -54,6 +54,20 @@
             <h4>Satnica:</h4>
             <h3><strong>{{ radnik.satnica }}</strong> kn</h3>
             <hr>
+            <h4>datum rodjenja:</h4>
+            {% if radnik.datum_rodjenja != None %}
+            <h3>{{ radnik.datum_rodjenja }}</h3>
+            {% else %}
+            <p><font color="red"> Nije uneto</font></p>
+            {% endif %}
+            <hr>
+            <h4>prebivalište:</h4>
+            {% if radnik.prebivaliste != None %}
+            <h3>{{ radnik.prebivaliste }}</h3>
+            {% else %}
+            <p><font color="red"> Nije uneto</font></p>
+            {% endif %}
+            <hr>
             <h4>br odela:</h4>
             {% if radnik.broj_odela != None %}
             <h3>{{ radnik.broj_odela }}</h3>

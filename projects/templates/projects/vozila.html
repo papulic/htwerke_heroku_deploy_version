@@ -33,6 +33,7 @@
                         <th>Sledeći servis</th>
                         <th>Registracija ističe</th>
                         <th>Dana do isteka registracije</th>
+                        <th></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -54,9 +55,16 @@
                         <td>{{ vozilo.registracija_istice }}</td>
                         {% for i, v in istek_registracije.items %}
                         {% if i == vozilo.id %}
-                        <td {% if v < 15 %}style="color:red"{% endif %}><strong>{{ v }}</strong></td>
+                        <td {% if v < 30 %}style="color:red"{% endif %}><strong>{{ v }}</strong></td>
                         {% endif %}
                         {% endfor %}
+                        <td>
+                            <a href="{% url 'projects:vozilo-delete' vozilo.id %}">
+                                <button type="button" class="btn btn-danger" onclick="clicked(event)">
+                                    <span class="glyphicon glyphicon-remove"></span>&nbsp; Obriši
+                                </button>
+                            </a>
+                        </td>
                     </tr>
                     {% endfor %}
                     </tbody>
@@ -66,6 +74,12 @@
     </div>
     {% endif %}
 </div>
+<script>
+function clicked(e)
+{
+    if(!confirm('Obrisati vozilo?'))e.preventDefault();
+}
+</script>
 {% endblock %}
 
 
