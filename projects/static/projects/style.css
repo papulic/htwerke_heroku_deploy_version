@@ -24,3 +24,8 @@ body{
     white-space: nowrap;
     max-width: 55ch;
 }
+
+td, th {
+  white-space: nowrap;
+  overflow: hidden;
+}
