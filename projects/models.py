@@ -31,6 +31,8 @@ class Zanimanja(models.Model):
 class Radnik(models.Model):
     ime = models.CharField(max_length=50)
     oib = models.CharField(max_length=50)
+    datum_rodjenja = models.CharField(max_length=10, null=True, blank=True)
+    prebivaliste = models.CharField(max_length=30, null=True, blank=True)
     broj_telefona = models.CharField(max_length=30, blank=True)
     broj_odela = models.IntegerField(default=None, null=True, blank=True)
     broj_cipela = models.IntegerField(default=None, null=True, blank=True)
@@ -74,6 +76,7 @@ class Dan(models.Model):
     posao = models.ForeignKey(Poslovi, null=True, blank=True, on_delete=models.SET_NULL)
     radio_sati = models.FloatField(max_length=10, default=0.0)
     ishrana = models.FloatField(max_length=10, default=0.0)
+    smestaj = models.FloatField(max_length=10, default=0.0)
     bolovanje = models.BooleanField(default=False)
     dozvoljeno_odsustvo = models.BooleanField(default=False)
     nedozvoljeno_odsustvo = models.BooleanField(default=False)
@@ -103,7 +106,7 @@ class Rashodi(models.Model):
     vrsta = models.CharField(max_length=150)
     kolicina = models.FloatField(max_length=10, default=0.0)
     posao = models.ForeignKey(Poslovi, on_delete=models.CASCADE)
-    vozilo = models.ForeignKey(Vozilo, null=True, blank=True )
+    vozilo = models.ForeignKey(Vozilo, null=True, blank=True, on_delete=models.SET_NULL)
 
     def __unicode__(self):
         return self.vrsta

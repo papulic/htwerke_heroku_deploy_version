@@ -36,7 +36,7 @@ class RadnikForm(forms.ModelForm):
         widget=forms.DateInput(format='%d.%m.%Y', attrs={'class': "datum"}), input_formats=('%d.%m.%Y', '%d/%m/%Y', '%d.%m.%y', '%d/%m/%y'))
     class Meta:
         model = Radnik
-        fields = ['ime', 'oib', 'poceo_raditi', 'ugovor_vazi_do', 'satnica', 'broj_telefona', 'broj_odela', 'broj_cipela', 'zaduzena_oprema', 'zanimanja', 'u_radnom_odnosu', 'komentar']
+        fields = ['ime', 'oib', 'datum_rodjenja', 'prebivaliste', 'poceo_raditi', 'ugovor_vazi_do', 'satnica', 'broj_telefona', 'broj_odela', 'broj_cipela', 'zaduzena_oprema', 'zanimanja', 'u_radnom_odnosu', 'komentar']
         widgets = {
             'zanimanja': forms.CheckboxSelectMultiple,
             'komentar': forms.Textarea
@@ -100,7 +100,7 @@ class Datum_finansForm(forms.Form):
 class DanForm(forms.ModelForm):
     class Meta:
         model = Dan
-        fields = ['radio_sati', 'ishrana', 'bolovanje', 'dozvoljeno_odsustvo', 'nedozvoljeno_odsustvo']
+        fields = ['radio_sati', 'ishrana', 'smestaj', 'bolovanje', 'dozvoljeno_odsustvo', 'nedozvoljeno_odsustvo']
 
 class AkontacijeForm(forms.ModelForm):
     class Meta:

@@ -12,6 +12,8 @@ from .models import Poslovi, Vozilo, Radnik, Prihodi, Rashodi, Zanimanja, Dan, A
 from .filters import RadnikFilter, ZanimanjeFilter
 import datetime
 from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
 
 def pdf_posao(request, posao_id):
@@ -188,8 +190,9 @@ def pdf_radnik(request, radnik_id):
             elif dan.nedozvoljeno_odsustvo:
                 dani['nedozvoljenog_odsustva'] += 1
             else:
-                dani['radnih_dana'] += 1
-                dani['radnih_sati'] += dan.radio_sati
+                if dan.radio_sati != 0:
+                    dani['radnih_dana'] += 1
+                    dani['radnih_sati'] += dan.radio_sati
 
 
     strana = 1
@@ -252,6 +255,77 @@ def pdf_radnik(request, radnik_id):
     return response
 
 
+def pdf_radnici_mesecni_izvestaj(request, mesec, godina, posao_id):
+    radnici = Radnik.objects.all()
+    Dani = Dan.objects.filter(datum__year=godina,
+                              datum__month=mesec).order_by('datum')
+    Akontacije_za_mesec = Akontacije.objects.filter(mesec=mesec, godina=godina)
+    aktivni_poslovi = []
+    for radnik in radnici:
+        if radnik.posao != None and radnik.posao not in aktivni_poslovi:
+            aktivni_poslovi.append(radnik.posao)
+    ukupno = {}
+    radnih_sati = {}
+    ishrana = {}
+    akontacije = {}
+    for radnik in radnici:
+        ukupno[radnik.id] = 0
+        radnih_sati[radnik.id] = 0
+        ishrana[radnik.id] = 0
+        akontacije[radnik.id] = 0
+    for dan in Dani:
+        if dan.radnik.id in ukupno:
+            ukupno[dan.radnik.id] += (dan.radio_sati * dan.radnik.satnica) + dan.ishrana
+            radnih_sati[dan.radnik.id] += dan.radio_sati
+            ishrana[dan.radnik.id] += dan.ishrana
+    for a in Akontacije_za_mesec:
+        if a.radnik.id in ukupno:
+            ukupno[a.radnik.id] -= a.kolicina
+            akontacije[a.radnik.id] += a.kolicina
+
+    svi = sum(ukupno.values())
+
+
+    # Create the HttpResponse object with the appropriate PDF headers.
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="Izvestaj radnika za {mesec}_{godina}.pdf"'.format(mesec=mesec, godina=godina)
+
+    # Create the PDF object, using the response object as its "file."
+    doc = SimpleDocTemplate(response)
+    # container for the 'Flowable' objects
+    elements = []
+    data = [['PREZIME I IME', 'RADNI SAT', 'BROJ RADNIH SATI', 'ISHRANA', 'AKONTACIJA', 'UKUPNO']]
+    for posao in aktivni_poslovi:
+        data.append([])
+        data.append([posao.ime])
+        for radnik in radnici:
+            if radnik.posao == posao:
+                data.append([radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
+
+    data.append([])
+    data.append(['NERASPOREDJENI'])
+    for radnik in radnici:
+        if radnik.posao == None and radnik.u_radnom_odnosu:
+            data.append([radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
+    data.append([])
+    data.append(['VAN RADNOG ODNOSA'])
+    for radnik in radnici:
+        if radnik.posao == None and not radnik.u_radnom_odnosu:
+            data.append([radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
+    data.append([])
+    data.append(['UKUPNO', '', '', '', '', svi])
+    t = Table(data)
+    t.setStyle(TableStyle([('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
+                           ('INNERGRID', (0, 0), (-2, -3), 0.25, colors.black),
+                           ('BOX', (0, 0), (-2, -3), 0.25, colors.black),
+                           ]))
+
+    elements.append(t)
+    # write the document to disk
+    doc.build(elements)
+    return response
+
+
 def posao_delete(request, posao_id):
     posao = Poslovi.objects.get(id=posao_id)
     if posao.kraj_radova != None:
@@ -264,11 +338,19 @@ def posao_delete(request, posao_id):
                              posao=posao.ime))
         return HttpResponseRedirect(reverse('projects:index'))
 
+
 def radnik_delete(request, radnik_id):
     radnik = Radnik.objects.get(id=radnik_id)
     radnik.delete()
     messages.success(request, "Radnik {radnik} je uspešno obrisan iz baze!".format(radnik=radnik.ime))
     return HttpResponseRedirect(reverse('projects:ljudi'))
+
+
+def vozilo_delete(request, vozilo_id):
+    vozilo = Vozilo.objects.get(id=vozilo_id)
+    vozilo.delete()
+    messages.success(request, "Vozilo {vozilo} je uspešno obrisano iz baze!".format(vozilo=vozilo.marka))
+    return HttpResponseRedirect(reverse('projects:vozila'))
 
 
 def sajt(request):
@@ -422,16 +504,18 @@ def mesecni_izvod_radnika(request, mesec, godina, posao_id):
             slobodnih_dana[radnik.id] = 0
             ishrana[radnik.id] = 0
         for dan in Dani:
-            ukupno[dan.radnik.id] += (dan.radio_sati * dan.radnik.satnica) + dan.ishrana
-            radnih_sati[dan.radnik.id] += dan.radio_sati
-            ishrana[dan.radnik.id] += dan.ishrana
-            if dan.bolovanje:
-                dana_bolovanja[dan.radnik.id] += 1
-            if dan.dozvoljeno_odsustvo:
-                slobodnih_dana[dan.radnik.id] += 1
+            if dan.radnik.id in ukupno:
+                ukupno[dan.radnik.id] += (dan.radio_sati * dan.radnik.satnica) + dan.ishrana
+                radnih_sati[dan.radnik.id] += dan.radio_sati
+                ishrana[dan.radnik.id] += dan.ishrana
+                if dan.bolovanje:
+                    dana_bolovanja[dan.radnik.id] += 1
+                if dan.dozvoljeno_odsustvo:
+                    slobodnih_dana[dan.radnik.id] += 1
         for a in Akontacije_za_mesec:
-            ukupno[a.radnik.id] -= a.kolicina
-            sve_akontacije += a.kolicina
+            if a.radnik.id in ukupno:
+                ukupno[a.radnik.id] -= a.kolicina
+                sve_akontacije += a.kolicina
 
         svi = sum(ukupno.values())
         return render(request, 'projects/mesecni_izvod.html', {
@@ -460,21 +544,35 @@ def mesecni_izvod_poslova(request, mesec, godina):
                                          datum__month=mesec)
         rashodi = Rashodi.objects.filter(datum__year=godina,
                                          datum__month=mesec)
+        Dani = Dan.objects.filter(datum__year=godina,
+                                  datum__month=mesec)
         poslovi = []
         mesecni_prihodi = {}
         mesecni_rashodi = {}
         mesecno_dobit = {}
+        radnih_sati = {}
+        dana_smestaja = {}
+        smestaj_finansijski = {}
         for posao in svi_poslovi:
             if len(posao.radnik_set.all()) > 0:
                 poslovi.append(posao)
                 mesecni_prihodi[posao.id] = 0
                 mesecni_rashodi[posao.id] = 0
+                radnih_sati[posao.id] = 0
+                dana_smestaja[posao.id] = 0
+                smestaj_finansijski[posao.id] = 0
                 for prihod in posao.prihodi_set.all():
                     if prihod in prihodi:
                         mesecni_prihodi[posao.id] += prihod.kolicina
                 for rashod in posao.rashodi_set.all():
                     if rashod in rashodi:
                         mesecni_rashodi[posao.id] += rashod.kolicina
+                for dan in posao.dan_set.all():
+                    if dan in Dani:
+                        radnih_sati[posao.id] += dan.radio_sati
+                        if dan.smestaj != 0.0:
+                            dana_smestaja[posao.id] += 1
+                            smestaj_finansijski[posao.id] += dan.smestaj
                 mesecno_dobit[posao.id] = mesecni_prihodi[posao.id] - mesecni_rashodi[posao.id]
         ukupna_dobit = sum(mesecno_dobit.values())
         ukupni_prihodi = sum(mesecni_prihodi.values())
@@ -488,7 +586,10 @@ def mesecni_izvod_poslova(request, mesec, godina):
             'godina': godina,
             'ukupna_dobit': ukupna_dobit,
             'ukupni_prihodi': ukupni_prihodi,
-            'ukupni_rashodi': ukupni_rashodi
+            'ukupni_rashodi': ukupni_rashodi,
+            'radnih_sati': radnih_sati,
+            'dana_smestaja': dana_smestaja,
+            'smestaj_finansijski': smestaj_finansijski
         })
 
 
@@ -597,8 +698,11 @@ def detail(request, project_id):
         project = get_object_or_404(Poslovi, pk=project_id)
         Dani = Dan.objects.filter(posao=project)
         radni_sati_svih_radnika = 0.0
+        dana_smestaja_svih_radnika = 0
         for dan in Dani:
             radni_sati_svih_radnika += dan.radio_sati
+            if dan.smestaj != 0.0:
+                dana_smestaja_svih_radnika += 1
         if project.kraj_radova:
             preostalo_dana = project.kraj_radova - current_date
         else:
@@ -615,9 +719,8 @@ def detail(request, project_id):
             ukupni_prihodi += prihod.kolicina
         dobit = ukupni_prihodi - ukupni_rashodi
         # get only available workers
-        dostupni_radnici = Radnik.objects.filter(dostupan=True)
-        radnici = Radnik.objects.all()
-        zanimanja_filter = ZanimanjeFilter(request.GET, queryset=radnici)
+        dostupni_radnici = Radnik.objects.filter(dostupan=True, u_radnom_odnosu=True)
+        zanimanja_filter = ZanimanjeFilter(request.GET, queryset=dostupni_radnici)
         # form = RadnikForm(request.POST or None)
         if request.POST.getlist('listdodaj'):
             for radnik_id in request.POST.getlist('listdodaj'):
@@ -650,7 +753,8 @@ def detail(request, project_id):
             'ukupni_prihodi': ukupni_prihodi,
             'dobit': dobit,
             'message': message,
-            'radni_sati_svih_radnika': radni_sati_svih_radnika
+            'radni_sati_svih_radnika': radni_sati_svih_radnika,
+            'dana_smestaja_svih_radnika': dana_smestaja_svih_radnika
         })
 
 
@@ -704,8 +808,9 @@ def radnik_detail(request, radnik_id):
                 elif dan.nedozvoljeno_odsustvo:
                     dani['nedozvoljenog_odsustva'] += 1
                 else:
-                    dani['radnih_dana'] += 1
-                    dani['radnih_sati'] += dan.radio_sati
+                    if dan.radio_sati != 0:
+                        dani['radnih_dana'] += 1
+                        dani['radnih_sati'] += dan.radio_sati
 
 
 
@@ -774,13 +879,14 @@ def dan_update(request, dan_id, posao_id):
     instance = Dan.objects.get(pk=dan_id)
     old_radio_sati = instance.radio_sati
     old_ishrana = instance.ishrana
+    old_smestaj = instance.smestaj
     form = DanForm(request.POST or None, instance=instance)
     if form.is_valid():
         dan = form.save(commit=False)
         dan.posao = dan.radnik.posao
         dan.save()
-        if dan.posao:
-            if dan.posao.kraj_radova:
+        if dan.posao != None:
+            if dan.posao.kraj_radova != None:
                 preostalo_dana = dan.posao.kraj_radova - current_date
                 preostalo_dana = preostalo_dana.days
             else:
@@ -817,6 +923,23 @@ def dan_update(request, dan_id, posao_id):
                     if old_ishrana != 0.0:
                         rashod_ishrana.kolicina -= old_ishrana
                     rashod_ishrana.save()
+                ###############################################################
+                if dan.smestaj != 0.0:
+                    try:
+                        rashod_smestaj = Rashodi.objects.get(vrsta="SMESTAJ_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year))
+                    except:
+                        pass
+                    try:
+                        rashod_smestaj.kolicina += dan.smestaj
+                    except:
+                        rashod_smestaj = Rashodi()
+                        rashod_smestaj.posao = dan.posao
+                        rashod_smestaj.datum = dan.datum
+                        rashod_smestaj.kolicina = dan.smestaj
+                        rashod_smestaj.vrsta = "SMESTAJ_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year)
+                    if old_smestaj != 0.0:
+                        rashod_smestaj.kolicina -= old_smestaj
+                    rashod_smestaj.save()
                 ###############################################################
                 if dan.posao.dogovoreni_radni_sati != 0.0:
                     try:
