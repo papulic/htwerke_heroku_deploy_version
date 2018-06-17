@@ -59,6 +59,26 @@ mozda sve objekte starije od tri godine?
 - Brisanjem radnika se brisu svi dani vezani za radnika!
 
 
+- na mesecnom pregledu radnika kad se ubaci posao  server error 500  --  ok
+- svakako racunaj radne sate na projektu bez obzira da li je dogovoreno ili nije  --  ok
+- radnih dana na pregledu radnika racunati ako je unet broj radnih sati  --  ok
+- godiste radnika  datum rodjenja  odakle je on  (prebivaliste)  --  ok
+- dan dobija polje smestaj, automatski obracunati na poslu broj smestaja i finansijski  --  ok
+- mesecni pregled posla radnih sati za sve radnike na tom poslu u tom mesecu i broj spavanja i finansijski -- ok
+- stampati saldo radnika -- ok
+- brisanje vozila -- ok
+
+
+- stampati mesecni presek posla na kartici finansije
+
+
+
+
+- PROBLEM JE AKO SE UPISU RADNI SATI A DA JE RADNIK NA POGRESNOM PROJEKTU, OSTAJU RASHODI ZA TAJ PROJEKAT!!
+
+
+
+
 heroku auth:token
 heroku run:detached your command here
 
@@ -75,3 +95,24 @@ $ssh-keygen -t rsa
 $heroku keys:clear
 $heroku keys:add 
 $git clone git@heroku.com:my-app.git -o heroku
+
+
+
+menjano:
+
+views: funkcija detail, radnik_detail, pdf_radnik, dan_update, detail, mesecni_izvod_poslova, dodate funkcije
+models: klasa radnik, dan        ---    mora makemigrations  i migrate
+forms: radnikform, danform
+urls.py: zadnja linija dodata
+
+poslovi.html
+radnik_detalji.html
+mesecni_izvod_finansije.html
+mesecni_izvod.html
+base.html
+ljudi.html
+vozila.html
+
+style.css
+
+logo.png
