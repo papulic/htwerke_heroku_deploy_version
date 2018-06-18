@@ -42,5 +42,6 @@ urlpatterns = [
     url(r'^administracija/dodaj_dane/(?P<mesec>[0-9]+)/(?P<godina>[0-9]+)/(?P<posao_id>[a-zA-Z0-9_.-]+)$', views.dodaj_dane, name='dodaj_dane'),
     url(r'^administracija/pdf/(?P<posao_id>[0-9]+)$', views.pdf_posao, name='pdf_posao'),
     url(r'^administracija/pdf_radnik/(?P<radnik_id>[0-9]+)$', views.pdf_radnik, name='pdf_radnik'),
-    url(r'^administracija/pdf_radnici_mesecni_izvestaj/(?P<mesec>[0-9]+)/(?P<godina>[0-9]+)/(?P<posao_id>[a-zA-Z0-9_.-]+)$', views.pdf_radnici_mesecni_izvestaj, name='pdf_radnici_mesecni_izvestaj')
+    url(r'^administracija/pdf_radnici_mesecni_izvestaj/(?P<mesec>[0-9]+)/(?P<godina>[0-9]+)/(?P<posao_id>[a-zA-Z0-9_.-]+)$', views.pdf_radnici_mesecni_izvestaj, name='pdf_radnici_mesecni_izvestaj'),
+    url(r'^administracija/pdf_posao_mesecni_izvestaj/(?P<posao_id>[0-9]+)/(?P<mesec>[0-9]+)/(?P<godina>[0-9]+)/$', views.pdf_posao_mesecni_presek, name='pdf_posao_mesecni')
 ]

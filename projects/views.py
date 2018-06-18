@@ -148,6 +148,139 @@ def pdf_posao(request, posao_id):
         return HttpResponseRedirect(reverse('projects:index'))
 
 
+def pdf_posao_mesecni_presek(request, posao_id, mesec, godina):
+    posao = Poslovi.objects.get(id=posao_id)
+
+    strana = 1
+    prihodi = posao.prihodi_set.filter(datum__year=godina,
+                              datum__month=mesec)
+    rashodi = posao.rashodi_set.filter(datum__year=godina,
+                              datum__month=mesec)
+    dani = Dan.objects.filter(posao=posao, datum__year=godina,
+                              datum__month=mesec)
+
+    komentari = Komentar.objects.filter(posao=posao)
+    radnici = {}
+    sati = 0
+    for dan in dani:
+        if dan.radnik.ime not in radnici:
+            radnici[dan.radnik.ime] = dan.radio_sati
+        else:
+            radnici[dan.radnik.ime] += dan.radio_sati
+        sati += dan.radio_sati
+    # Create the HttpResponse object with the appropriate PDF headers.
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="{posao} - {mesec}.{godina}.pdf"'.format(posao=posao.ime, mesec=mesec, godina=godina)
+
+    # Create the PDF object, using the response object as its "file."
+    p = canvas.Canvas(response)
+    # pagesize=(595.27,841.89)
+    # Draw things on the PDF. Here's where the PDF generation happens.
+    # See the ReportLab documentation for the full list of functionality.
+    prvi_red = "{posao} - {mesec}.{godina}".format(posao=posao.ime, mesec=mesec, godina=godina)
+    drugi_red = "{pd}  Dogovoreno na radni sat: {sat}, dogovoreno po kvadratu: {kv}".format(pd=posao.pocetak_radova.strftime('%d.%m.%Y'), sat=posao.dogovoreni_radni_sati, kv=posao.dogovoreno_po_kvadratu)
+    p.drawString(50, 820, prvi_red)
+    # p.setStrokeColorRGB(0, 1, 0.3)  # choose your line color
+    p.line(45, 815, 570, 815)
+    p.setFontSize(10)
+    p.drawString(50, 800, drugi_red)
+    p.line(60, 795, 500, 795)
+    p.drawString(60, 780, "Radnici koji rade na projektu:")
+    p.setFontSize(7)
+    y_radnici = 765
+    for radnik, sat in radnici.iteritems():
+        string = "{sat} sati - {radnik}".format(sat=sat, radnik=radnik)
+        p.drawString(60, y_radnici, string)
+        y_radnici -= 10
+    string = "Ukupno sati: {sati}".format(sati=sati)
+    p.drawString(60, y_radnici, string)
+    y_radnici -= 15
+    p.line(60, y_radnici, 500, y_radnici)
+    p.setFontSize(10)
+    p.drawString(60, y_radnici - 15, "Prihodi:")
+    p.line(60, y_radnici - 20, 160, y_radnici - 20)
+
+    p.setFontSize(7)
+    y = y_radnici - 30
+    svi_prihodi = 0.0
+    svi_rashodi = 0.0
+    for prihod in prihodi:
+        svi_prihodi += prihod.kolicina
+        if len(prihod.vrsta) > 60:
+            prihod.vrsta = prihod.vrsta[:60] + "..."
+        string = "{k} - {p}".format(k=prihod.kolicina, p=prihod.vrsta)
+        p.drawString(60, y, string)
+        y -= 10
+        if y < 100:
+            y = 800
+            stra = "- {strana} -".format(strana=strana)
+            p.drawString(290, 20, stra)
+            p.showPage()
+            strana += 1
+            p.setFontSize(7)
+    p.drawString(60, y, "Ukupno: {svi_prihodi}".format(svi_prihodi=svi_prihodi))
+    y -= 10
+    p.line(60, y, 500, y)
+    p.setFontSize(10)
+    p.drawString(60, y - 10, "Rashodi:")
+    p.line(60, y - 15, 160, y - 15)
+    p.setFontSize(7)
+    y = y - 25
+    for rashod in rashodi:
+        svi_rashodi += rashod.kolicina
+        if len(rashod.vrsta) > 60:
+            rashod.vrsta = rashod.vrsta[:60] + "..."
+        string = "{k} - {p}".format(k=rashod.kolicina, p=rashod.vrsta)
+        p.drawString(60, y, string)
+        y -= 10
+        if y < 100:
+            y = 800
+            stra = "- {strana} -".format(strana=strana)
+            p.drawString(290, 20, stra)
+            p.showPage()
+            strana += 1
+            p.setFontSize(7)
+
+    p.drawString(60, y, "Ukupno: {svi_rashodi}".format(svi_rashodi=svi_rashodi))
+    y -= 10
+    p.line(60, y, 500, y)
+    p.setFontSize(10)
+    dobit = "Dobit: {dobit}".format(dobit=svi_prihodi - svi_rashodi)
+    y -= 15
+    p.drawString(60, y, dobit)
+    y -= 15
+    p.line(60, y, 160, y)
+    p.setFontSize(10)
+    y -= 10
+    p.drawString(60, y, "Komentari:")
+    p.line(60, y - 5, 160, y - 5)
+    y -= 15
+    p.setFontSize(7)
+    kom = 1
+    for komentar in komentari:
+        kom_broj = "- {kom} -".format(kom=kom)
+        p.drawString(60, y, kom_broj)
+        y -= 7
+        redovi = [str(komentar.komentar)[x:x+60] for x in xrange(0, len(str(komentar.komentar)), 60)]
+        for red in redovi:
+            p.drawString(70, y, red)
+            y -= 10
+            if y < 100:
+                y = 800
+                stra = "- {strana} -".format(strana=strana)
+                p.drawString(290, 20, stra)
+                p.showPage()
+                strana += 1
+                p.setFontSize(7)
+        kom += 1
+    # Close the PDF object cleanly, and we're done.
+    stra = "- {strana} -".format(strana=strana)
+    p.drawString(290, 20, stra)
+    p.showPage()
+    p.save()
+    return response
+
+
 def pdf_radnik(request, radnik_id):
     meseci = {'1':'Januar', '2':'Februar', '3':'Mart', '4':'April', '5':'Maj', '6':'Jun', '7':'Jul', '8':'Avgust', '9':'Septembar',
               '10':'Oktobar', '11':'Novembar', '12':'Decembar'}
