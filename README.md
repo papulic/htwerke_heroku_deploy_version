@@ -122,5 +122,8 @@ Voditi racuna da je dobra vrednost doprinosa - Ne moze da se menja!!!
 Mora se za radnika uneti par stavki jer dolazi do gomile problema!!
 
 
-kad se unese rucno LD da napravi rashod
+kad se unese rucno LD da napravi rashod na trenutnom poslu. uneta vrednost - prethodna vrednost racunaj na trenutnom poslu
 da se moze menjati iznos doprinosa.. (moze vec u adminu!!)
+
+
+doprinos da bude boolean na danu i kad se otkaci da ga racuna na trenutnom poslu a ne na dodaj dane.
