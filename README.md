@@ -100,19 +100,27 @@ $git clone git@heroku.com:my-app.git -o heroku
 
 menjano:
 
-views: funkcija detail, radnik_detail, pdf_radnik, dan_update, detail, mesecni_izvod_poslova, dodate funkcije
-models: klasa radnik, dan        ---    mora makemigrations  i migrate
-forms: radnikform, danform
-urls.py: zadnja linija dodata
+
+
+
+
+models posao, radnik, dan, rucnoLD  (ako se satnica ne doda nece raditi, moze da pukne server),  doprinos, vozilo
+forms posao, radnik, RucnoLDForm, voziloform
+views dan_update, dodaj_dane (rucnoLD, doprinos), pdf_radnici_mesecni_izvestaj, mesecni_izvod_radnika    ,    licni_dohodak_update, calendar, 
+urls ld_update
+admin doprinos
 
 poslovi.html
-radnik_detalji.html
-mesecni_izvod_finansije.html
-mesecni_izvod.html
-base.html
 ljudi.html
-vozila.html
+mesecni_izvod.html
+vozilo_detalji.html
++ ld_update.html
 
-style.css
+doprinos mora da postoji u bazi!!!
+svi radnici MORAAAJUUU biti rasporedjeni pre nego sto se klikne dodaj dane!!!!!!
+Voditi racuna da je dobra vrednost doprinosa - Ne moze da se menja!!!
+Mora se za radnika uneti par stavki jer dolazi do gomile problema!!
 
-logo.png
+
+kad se unese rucno LD da napravi rashod
+da se moze menjati iznos doprinosa.. (moze vec u adminu!!)
