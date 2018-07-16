@@ -58,6 +58,7 @@
             <th>Trenutno na poslu</th>
             <th>Satnica</th>
             <th>Akontacija</th>
+            <th>RucnoLD</th>
             <th class="right-border">Ishrana</th>
             {% for dan in Dani %}
                 {% if dan.radnik == radnik %}
@@ -88,6 +89,16 @@
                     <a href="{% url 'projects:akontacija-update' mesec godina posao_id a.id %}">
                         <font color="black" {% if dan.datum.weekday == 6 %}style="color:red"{% endif %}><strong>
                         {{ a.kolicina }}
+                        </strong></font>
+                    </a>
+                    {% endif %}
+                    {% endfor %}
+                </td>
+                <td>{% for l in licni_dohodci_za_mesec %}
+                    {% if l.radnik == radnik %}
+                    <a href="{% url 'projects:licni_dohodak-update' mesec godina posao_id l.id %}">
+                        <font color="black" {% if dan.datum.weekday == 6 %}style="color:red"{% endif %}><strong>
+                        {{ l.kolicina }}
                         </strong></font>
                     </a>
                     {% endif %}

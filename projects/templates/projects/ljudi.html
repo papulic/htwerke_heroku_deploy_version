@@ -73,6 +73,7 @@
                     <th>Dostupnost</th>
                     <th>Trenutno na poslu</th>
                     <th>Satnica</th>
+                    <th>Klasa</th>
                     <th>Ugovor važi do</th>
                     <th>Dana do isteka ugovora</th>
                 </tr>
@@ -101,6 +102,7 @@
                         ---------------------
                         {% endif %}</td>
                         <td>{{ radnik.satnica }} kn</td>
+                        <td>{{ radnik.klasa }}</td>
                         <td {% if radnik.dana_do_isteka_ugovora < 30 %}style="color:red"{% endif %}>{{ radnik.ugovor_vazi_do }}</td>
                         <td {% if radnik.dana_do_isteka_ugovora < 30 %}style="color:red"{% endif %}>{{ radnik.dana_do_isteka_ugovora }}</td>
                     </tr>

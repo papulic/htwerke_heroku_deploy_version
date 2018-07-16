@@ -59,6 +59,10 @@
             </div>
              {% if posao.dogovoreni_radni_sati != 0.0 %}
              <h4>Dogovoren radni sat: {{ posao.dogovoreni_radni_sati}}</h4>
+             <h5>Dogovoren radni sat za radnike klase 2: {{ posao.dogovoreni_radni_sati_klasa_2}}</h5>
+             <h6>Dogovoren radni sat za radnike klase 3: {{ posao.dogovoreni_radni_sati_klasa_3}}</h6>
+             <h6>Dogovoren radni sat za radnike klase 4: {{ posao.dogovoreni_radni_sati_klasa_4}}</h6>
+             <h6>Dogovoren radni sat za radnike klase 5: {{ posao.dogovoreni_radni_sati_klasa_5}}</h6>
              {% else %}
              <h4>Ovaj posao nije dogovoren na radni sat</h4>
              {% endif %}
