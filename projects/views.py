@@ -1207,7 +1207,7 @@ def radnik_update(request, radnik_id):
         radnik.save()
         form.save_m2m()
         messages.success(request, "Podaci su ažurirani!")
-        return HttpResponseRedirect(reverse('projects:radnik-detail', args=(radnik_id)))
+        return HttpResponseRedirect(reverse('projects:radnik-detail', kwargs={'radnik_id':int(radnik_id)}))
     context = {
         "form": form,
         'radnik_id': radnik_id,
