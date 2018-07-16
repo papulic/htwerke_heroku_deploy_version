@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import Poslovi, Vozilo, Radnik, Prihodi, Rashodi, Dan, Zanimanja, Akontacije, Komentar
+from .models import Poslovi, Vozilo, Radnik, Prihodi, Rashodi, Dan, Zanimanja, Akontacije, Komentar, RucnoLD
 
 class DateInput(forms.DateInput):
     input_type = 'date'
@@ -27,7 +27,7 @@ class PosloviForm(forms.ModelForm):
         required=False)
     class Meta:
         model = Poslovi
-        fields = ['ime', 'opis', 'dogovoreni_radni_sati', 'dogovoreno_po_kvadratu', 'pocetak_radova', 'kraj_radova']
+        fields = ['ime', 'opis', 'dogovoreni_radni_sati', 'dogovoreni_radni_sati_klasa_2', 'dogovoreni_radni_sati_klasa_3', 'dogovoreni_radni_sati_klasa_4', 'dogovoreni_radni_sati_klasa_5', 'dogovoreno_po_kvadratu', 'pocetak_radova', 'kraj_radova']
 
 class RadnikForm(forms.ModelForm):
     poceo_raditi = forms.DateField(
@@ -36,7 +36,7 @@ class RadnikForm(forms.ModelForm):
         widget=forms.DateInput(format='%d.%m.%Y', attrs={'class': "datum"}), input_formats=('%d.%m.%Y', '%d/%m/%Y', '%d.%m.%y', '%d/%m/%y'))
     class Meta:
         model = Radnik
-        fields = ['ime', 'oib', 'datum_rodjenja', 'prebivaliste', 'poceo_raditi', 'ugovor_vazi_do', 'satnica', 'broj_telefona', 'broj_odela', 'broj_cipela', 'zaduzena_oprema', 'zanimanja', 'u_radnom_odnosu', 'komentar']
+        fields = ['ime', 'oib', 'datum_rodjenja', 'prebivaliste', 'poceo_raditi', 'ugovor_vazi_do', 'satnica', 'broj_telefona', 'broj_odela', 'broj_cipela', 'zaduzena_oprema', 'zanimanja', 'u_radnom_odnosu', 'klasa', 'komentar']
         widgets = {
             'zanimanja': forms.CheckboxSelectMultiple,
             'komentar': forms.Textarea
@@ -45,11 +45,9 @@ class RadnikForm(forms.ModelForm):
 class VoziloForm(forms.ModelForm):
     registracija_istice = forms.DateField(
         widget=forms.DateInput(format='%d.%m.%Y', attrs={'class': "datum"}), input_formats=('%d.%m.%Y', '%d/%m/%Y', '%d.%m.%y', '%d/%m/%y'))
-    sledeci_servis = forms.DateField(
-        widget=forms.DateInput(format='%d.%m.%Y', attrs={'class': "datum"}), input_formats=('%d.%m.%Y', '%d/%m/%Y', '%d.%m.%y', '%d/%m/%y'), required=False)
     class Meta:
         model = Vozilo
-        fields = ['marka', 'predjeni_kilometri', 'registracija_istice', 'sledeci_servis', 'potrosnja_goriva', 'trenutno_duzi', 'opis']
+        fields = ['marka', 'registracija', 'predjeni_kilometri', 'registracija_istice', 'sledeci_servis', 'potrosnja_goriva', 'trenutno_duzi', 'opis']
         widgets = {
             'opis': forms.Textarea
         }
@@ -115,3 +113,8 @@ class KomentarForm(forms.ModelForm):
     class Meta:
         model = Komentar
         fields = ['datum', 'komentar']
+
+class RucnoLDForm(forms.ModelForm):
+    class Meta:
+        model = RucnoLD
+        fields = ['kolicina', 'komentar']

@@ -7,6 +7,10 @@ class Poslovi(models.Model):
     ime = models.CharField(max_length=30)
     opis = models.CharField(max_length=100, blank=True)
     dogovoreni_radni_sati = models.FloatField(default=0.0)
+    dogovoreni_radni_sati_klasa_2 = models.FloatField(default=0.0)
+    dogovoreni_radni_sati_klasa_3 = models.FloatField(default=0.0)
+    dogovoreni_radni_sati_klasa_4 = models.FloatField(default=0.0)
+    dogovoreni_radni_sati_klasa_5 = models.FloatField(default=0.0)
     dogovoreno_po_kvadratu = models.FloatField(default=0.0)
     pocetak_radova = models.DateField()
     kraj_radova = models.DateField(null=True, blank=True)
@@ -27,10 +31,18 @@ class Zanimanja(models.Model):
     class Meta:
         verbose_name_plural = "Zanimanja"
 
+klase = (
+    ('klasa_1', 'KLASA 1'),
+    ('klasa_2', 'KLASA 2'),
+    ('klasa_3', 'KLASA 3'),
+    ('klasa_4', 'KLASA 4'),
+    ('klasa_5', 'KLASA 5'),
+)
+
 
 class Radnik(models.Model):
     ime = models.CharField(max_length=50)
-    oib = models.CharField(max_length=50)
+    oib = models.CharField(max_length=50, null=True, blank=True)
     datum_rodjenja = models.CharField(max_length=10, null=True, blank=True)
     prebivaliste = models.CharField(max_length=30, null=True, blank=True)
     broj_telefona = models.CharField(max_length=30, blank=True)
@@ -43,6 +55,7 @@ class Radnik(models.Model):
     dostupan = models.BooleanField(default=True)
     posao = models.ForeignKey(Poslovi, null=True, blank=True, on_delete=models.SET_NULL)
     u_radnom_odnosu = models.BooleanField(default=True)
+    klasa = models.CharField(max_length=10, choices=klase, default='klasa_1')
     zanimanja = models.ManyToManyField(Zanimanja)
     dana_do_isteka_ugovora = models.IntegerField(default=None, null=True, blank=True)
     komentar = models.CharField(max_length=500, blank=True)
@@ -56,9 +69,10 @@ class Radnik(models.Model):
 
 class Vozilo(models.Model):
     marka = models.CharField(max_length=30)
+    registracija = models.CharField(max_length=30, null=True, blank=True)
     predjeni_kilometri = models.CharField(max_length=50, null=True, blank=True)
     registracija_istice = models.DateField()
-    sledeci_servis = models.DateField(null=True, blank=True)
+    sledeci_servis = models.CharField(max_length=50, null=True, blank=True)
     potrosnja_goriva = models.FloatField(max_length=10, default=0.0)
     opis = models.CharField(max_length=100, blank=True)
     trenutno_duzi = models.ForeignKey(Radnik, null=True, blank=True, on_delete=models.SET_NULL)
@@ -80,6 +94,7 @@ class Dan(models.Model):
     bolovanje = models.BooleanField(default=False)
     dozvoljeno_odsustvo = models.BooleanField(default=False)
     nedozvoljeno_odsustvo = models.BooleanField(default=False)
+    doprinos = models.FloatField(max_length=10, default=0.0)
 
     def __unicode__(self):
         return str(self.datum) + " - " + self.radnik.ime
@@ -127,6 +142,19 @@ class Akontacije(models.Model):
     class Meta:
         verbose_name_plural = "Akontacije"
 
+class RucnoLD(models.Model):
+    godina = models.IntegerField()
+    mesec = models.IntegerField()
+    kolicina = models.FloatField(default=0.0)
+    radnik = models.ForeignKey(Radnik)
+    komentar = models.CharField(max_length=150, null=True, blank=True)
+
+    def __unicode__(self):
+        return self.radnik.ime
+
+    class Meta:
+        verbose_name_plural = "Akontacije"
+
 class Komentar(models.Model):
     datum = models.DateField(null=True, blank=True)
     komentar = models.TextField()
@@ -137,3 +165,6 @@ class Komentar(models.Model):
 
     class Meta:
         verbose_name_plural = "Komentari"
+
+class Doprinos(models.Model):
+    iznos = models.FloatField()

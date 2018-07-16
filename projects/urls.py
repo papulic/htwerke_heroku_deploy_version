@@ -22,6 +22,7 @@ urlpatterns = [
     url(r'^administracija/azuriranje_radnika/(?P<radnik_id>[0-9]+)/$', views.radnik_update, name='radnik-update'),
     url(r'^administracija/azuriranje_dana/(?P<dan_id>[0-9]+)/(?P<posao_id>[a-zA-Z0-9_.-]+)$', views.dan_update, name='dan-update'),
     url(r'^administracija/azuriranje_akontacije/(?P<mesec>[0-9]+)/(?P<godina>[0-9]+)/(?P<posao_id>[a-zA-Z0-9_.-]+)/(?P<akontacija_id>[0-9]+)$', views.akontacija_update, name='akontacija-update'),
+    url(r'^administracija/azuriranje_licnog_dohodka/(?P<mesec>[0-9]+)/(?P<godina>[0-9]+)/(?P<posao_id>[a-zA-Z0-9_.-]+)/(?P<ld_id>[0-9]+)$', views.licni_dohodak_update, name='licni_dohodak-update'),
     url(r'^administracija/azuriranje_vozila/(?P<vozilo_id>[0-9]+)/$', views.vozilo_update, name='vozilo-update'),
     url(r'^administracija/izmena_komentara/(?P<komentar_id>[0-9]+)/$', views.komentar_update, name='komentar-update'),
     url(r'^administracija/novi_prihod/(?P<project_id>[0-9]+)/$', views.create_prihod, name='prihod-add'),

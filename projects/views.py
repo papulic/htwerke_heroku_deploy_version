@@ -4,13 +4,14 @@ from __future__ import unicode_literals
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import logout
-from .forms import UserForm, PosloviForm, RadnikForm, PrihodiForm, RashodiForm, DatumForm, DanForm, ZanimanjeForm, VoziloForm, AkontacijeForm, Datum_finansForm, KvadratForm, KomentarForm
+from .forms import UserForm, PosloviForm, RadnikForm, PrihodiForm, RashodiForm, DatumForm, DanForm, ZanimanjeForm, VoziloForm, AkontacijeForm, Datum_finansForm, KvadratForm, KomentarForm, RucnoLDForm
 from django.http import HttpResponseRedirect, HttpResponse
 from django.urls import reverse
 from django.contrib import messages
-from .models import Poslovi, Vozilo, Radnik, Prihodi, Rashodi, Zanimanja, Dan, Akontacije, Komentar
+from .models import Poslovi, Vozilo, Radnik, Prihodi, Rashodi, Zanimanja, Dan, Akontacije, Komentar, RucnoLD, Doprinos
 from .filters import RadnikFilter, ZanimanjeFilter
 import datetime
+import calendar
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
@@ -393,6 +394,7 @@ def pdf_radnici_mesecni_izvestaj(request, mesec, godina, posao_id):
     Dani = Dan.objects.filter(datum__year=godina,
                               datum__month=mesec).order_by('datum')
     Akontacije_za_mesec = Akontacije.objects.filter(mesec=mesec, godina=godina)
+    licni_dohodak_za_mesec = RucnoLD.objects.filter(mesec=mesec, godina=godina)
     aktivni_poslovi = []
     for radnik in radnici:
         if radnik.posao != None and radnik.posao not in aktivni_poslovi:
@@ -415,6 +417,9 @@ def pdf_radnici_mesecni_izvestaj(request, mesec, godina, posao_id):
         if a.radnik.id in ukupno:
             ukupno[a.radnik.id] -= a.kolicina
             akontacije[a.radnik.id] += a.kolicina
+    for l in licni_dohodak_za_mesec:
+        if l.radnik.id in ukupno:
+            ukupno[l.radnik.id] += l.kolicina
 
     svi = sum(ukupno.values())
 
@@ -465,6 +470,11 @@ def posao_delete(request, posao_id):
         posao.delete()
         messages.success(request,
                          "Posao {posao} je uspešno obrisan iz baze!".format(posao=posao.ime))
+
+        # debug
+        # from django.core.mail import EmailMessage
+        # email = EmailMessage('brisanje', '{posao} obrisan'.format(posao=posao.ime), to=['papulic@yahoo.com'])
+        # email.send()
         return HttpResponseRedirect(reverse('projects:index'))
     else:
         messages.success(request, "Posao {posao} još nije završen, posao možete obrisati tek kada posao ima datum kraja radova!".format(
@@ -583,6 +593,7 @@ def dodaj_dane(request, mesec, godina, posao_id):
     dan_dodat = False
     current_date = datetime.date.today()
     radnici = Radnik.objects.filter(u_radnom_odnosu=True)
+    doprinos = Doprinos.objects.get(pk=1).iznos
     for radnik in radnici:
         if len(radnik.dan_set.all()):
             last_radnik_day = max([i.datum for i in radnik.dan_set.all()])
@@ -592,9 +603,23 @@ def dodaj_dane(request, mesec, godina, posao_id):
         for i in range(delta.days + 1):
             if i != 0:
                 day = (last_radnik_day + datetime.timedelta(days=i))
+                dana_u_mesecu = calendar.monthrange(day.year, day.month)[1]
+                doprinos_za_dan = float(doprinos) / float(dana_u_mesecu)
                 new_day = Dan()
                 new_day.datum = day
                 new_day.radnik = radnik
+                new_day.doprinos = doprinos_za_dan
+                try:
+                    vrsta = "DOPRINOSI_RADNIKA_{id}_{p}_{m}_{g}".format(p=radnik.posao.ime, id=radnik.posao.id, m=day.month, g=day.year)
+                    rashod_doprinos = Rashodi.objects.get(vrsta=vrsta)
+                    rashod_doprinos.kolicina += doprinos_za_dan
+                except:
+                    rashod_doprinos = Rashodi()
+                    rashod_doprinos.posao = radnik.posao
+                    rashod_doprinos.datum = day
+                    rashod_doprinos.kolicina = doprinos_za_dan
+                    rashod_doprinos.vrsta = "DOPRINOSI_RADNIKA_{id}_{p}_{m}_{g}".format(p=radnik.posao.ime, id=radnik.posao.id, m=day.month, g=day.year)
+                rashod_doprinos.save()
                 new_day.save()
                 dan_dodat = True
                 try:
@@ -605,6 +630,14 @@ def dodaj_dane(request, mesec, godina, posao_id):
                     akontacija.mesec = day.month
                     akontacija.godina = day.year
                     akontacija.save()
+                try:
+                    licni_dohodak = RucnoLD.objects.get(mesec=day.month, godina=day.year, radnik=radnik)
+                except:
+                    licni_dohodak = RucnoLD()
+                    licni_dohodak.radnik = radnik
+                    licni_dohodak.mesec = day.month
+                    licni_dohodak.godina = day.year
+                    licni_dohodak.save()
     if dan_dodat:
         messages.success(request, "Svi dani do današnjeg datuma su dodati!")
     else:
@@ -624,6 +657,7 @@ def mesecni_izvod_radnika(request, mesec, godina, posao_id):
         Dani = Dan.objects.filter(datum__year=godina,
               datum__month=mesec).order_by('datum')
         Akontacije_za_mesec = Akontacije.objects.filter(mesec=mesec, godina=godina)
+        licni_dohodci_za_mesec = RucnoLD.objects.filter(mesec=mesec, godina=godina)
         ukupno = {}
         dana_bolovanja = {}
         radnih_sati = {}
@@ -649,6 +683,9 @@ def mesecni_izvod_radnika(request, mesec, godina, posao_id):
             if a.radnik.id in ukupno:
                 ukupno[a.radnik.id] -= a.kolicina
                 sve_akontacije += a.kolicina
+        for l in licni_dohodci_za_mesec:
+            if l.radnik.id in ukupno:
+                ukupno[l.radnik.id] += l.kolicina
 
         svi = sum(ukupno.values())
         return render(request, 'projects/mesecni_izvod.html', {
@@ -664,7 +701,8 @@ def mesecni_izvod_radnika(request, mesec, godina, posao_id):
             'posao_id': posao_id,
             'akontacije': Akontacije_za_mesec,
             'ishrana': ishrana,
-            'sve_akontacije': sve_akontacije
+            'sve_akontacije': sve_akontacije,
+            'licni_dohodci_za_mesec': licni_dohodci_za_mesec
         })
 
 
@@ -1055,6 +1093,7 @@ def dan_update(request, dan_id, posao_id):
                         rashod_ishrana.vrsta = "ISHRANA_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year)
                     if old_ishrana != 0.0:
                         rashod_ishrana.kolicina -= old_ishrana
+                        rashod_ishrana.kolicina += dan.ishrana
                     rashod_ishrana.save()
                 ###############################################################
                 if dan.smestaj != 0.0:
@@ -1072,6 +1111,7 @@ def dan_update(request, dan_id, posao_id):
                         rashod_smestaj.vrsta = "SMESTAJ_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year)
                     if old_smestaj != 0.0:
                         rashod_smestaj.kolicina -= old_smestaj
+                        rashod_smestaj.kolicina += dan.smestaj
                     rashod_smestaj.save()
                 ###############################################################
                 if dan.posao.dogovoreni_radni_sati != 0.0:
@@ -1080,15 +1120,46 @@ def dan_update(request, dan_id, posao_id):
                     except:
                         pass
                     try:
-                        prihod.kolicina += dan.posao.dogovoreni_radni_sati * dan.radio_sati
+                        if dan.radnik.klasa == "klasa_2":
+                            prihod.kolicina += dan.posao.dogovoreni_radni_sati_klasa_2 * dan.radio_sati
+                        elif dan.radnik.klasa == "klasa_3":
+                            prihod.kolicina += dan.posao.dogovoreni_radni_sati_klasa_3 * dan.radio_sati
+                        elif dan.radnik.klasa == "klasa_4":
+                            prihod.kolicina += dan.posao.dogovoreni_radni_sati_klasa_4 * dan.radio_sati
+                        elif dan.radnik.klasa == "klasa_5":
+                            prihod.kolicina += dan.posao.dogovoreni_radni_sati_klasa_5 * dan.radio_sati
+                        else:
+                            prihod.kolicina += dan.posao.dogovoreni_radni_sati * dan.radio_sati
                     except:
                         prihod = Prihodi()
                         prihod.posao = dan.posao
                         prihod.datum = dan.datum
-                        prihod.kolicina = dan.posao.dogovoreni_radni_sati * dan.radio_sati
+                        if dan.radnik.klasa == "klasa_2":
+                            prihod.kolicina = dan.posao.dogovoreni_radni_sati_klasa_2 * dan.radio_sati
+                        elif dan.radnik.klasa == "klasa_3":
+                            prihod.kolicina = dan.posao.dogovoreni_radni_sati_klasa_3 * dan.radio_sati
+                        elif dan.radnik.klasa == "klasa_4":
+                            prihod.kolicina = dan.posao.dogovoreni_radni_sati_klasa_4 * dan.radio_sati
+                        elif dan.radnik.klasa == "klasa_5":
+                            prihod.kolicina = dan.posao.dogovoreni_radni_sati_klasa_5 * dan.radio_sati
+                        else:
+                            prihod.kolicina = dan.posao.dogovoreni_radni_sati * dan.radio_sati
                         prihod.vrsta = "SATNICA_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year)
-                    if old_radio_sati != 0.0 and prihod.kolicina != dan.posao.dogovoreni_radni_sati * dan.radio_sati:
-                        prihod.kolicina -= old_radio_sati * dan.posao.dogovoreni_radni_sati
+                    if dan.radnik.klasa == "klasa_2":
+                        if old_radio_sati != 0.0 and prihod.kolicina != dan.posao.dogovoreni_radni_sati_klasa_2 * dan.radio_sati:
+                            prihod.kolicina -= old_radio_sati * dan.posao.dogovoreni_radni_sati_klasa_2
+                    elif dan.radnik.klasa == "klasa_3":
+                        if old_radio_sati != 0.0 and prihod.kolicina != dan.posao.dogovoreni_radni_sati_klasa_3 * dan.radio_sati:
+                            prihod.kolicina -= old_radio_sati * dan.posao.dogovoreni_radni_sati_klasa_3
+                    elif dan.radnik.klasa == "klasa_4":
+                        if old_radio_sati != 0.0 and prihod.kolicina != dan.posao.dogovoreni_radni_sati_klasa_4 * dan.radio_sati:
+                            prihod.kolicina -= old_radio_sati * dan.posao.dogovoreni_radni_sati_klasa_4
+                    elif dan.radnik.klasa == "klasa_5":
+                        if old_radio_sati != 0.0 and prihod.kolicina != dan.posao.dogovoreni_radni_sati_klasa_5 * dan.radio_sati:
+                            prihod.kolicina -= old_radio_sati * dan.posao.dogovoreni_radni_sati_klasa_5
+                    else:
+                        if old_radio_sati != 0.0 and prihod.kolicina != dan.posao.dogovoreni_radni_sati * dan.radio_sati:
+                            prihod.kolicina -= old_radio_sati * dan.posao.dogovoreni_radni_sati
                     prihod.save()
         return HttpResponseRedirect(reverse('projects:monthview-workers', args=(dan.datum.month, dan.datum.year, posao_id)))
     context = {
@@ -1111,6 +1182,20 @@ def akontacija_update(request, mesec, godina, posao_id, akontacija_id):
         'instance': instance,
     }
     return render(request, 'projects/akontacija_update.html', context)
+
+
+def licni_dohodak_update(request, mesec, godina, posao_id, ld_id):
+    instance = RucnoLD.objects.get(pk=ld_id)
+    form = RucnoLDForm(request.POST or None, instance=instance)
+    if form.is_valid():
+        ld = form.save(commit=False)
+        ld.save()
+        return HttpResponseRedirect(reverse('projects:monthview-workers', args=(mesec, godina, posao_id)))
+    context = {
+        "form": form,
+        'instance': instance,
+    }
+    return render(request, 'projects/ld_update.html', context)
 
 
 
