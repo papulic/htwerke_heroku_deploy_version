@@ -4,1364 +4,396 @@ from __future__ import unicode_literals
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import logout
-from .forms import UserForm, PosloviForm, RadnikForm, PrihodiForm, RashodiForm, DatumForm, DanForm, ZanimanjeForm, VoziloForm, AkontacijeForm, Datum_finansForm, KvadratForm, KomentarForm, RucnoLDForm
 from django.http import HttpResponseRedirect, HttpResponse
 from django.urls import reverse
 from django.contrib import messages
-from .models import Poslovi, Vozilo, Radnik, Prihodi, Rashodi, Zanimanja, Dan, Akontacije, Komentar, RucnoLD, Doprinos
-from .filters import RadnikFilter, ZanimanjeFilter
+from django.contrib.auth.models import User
+from django.core.mail import EmailMessage
+from .forms import UserLoginForm, UserRegisterForm, DetaljiForm
+from . models import Poruke, Detalji_korisnika, Korpa, Artikal, Kategorija, Podkategorija, Brend, Entry, Tip, Slika, Pretraga
+from django.http import JsonResponse
+# import random
 import datetime
-import calendar
-from reportlab.pdfgen import canvas
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
-
-
-def pdf_posao(request, posao_id):
-    posao = Poslovi.objects.get(id=posao_id)
-    if posao.kraj_radova != None:
-        strana = 1
-        prihodi = posao.prihodi_set.all()
-        rashodi = posao.rashodi_set.all()
-        dani = Dan.objects.filter(posao=posao)
-        komentari = Komentar.objects.filter(posao=posao)
-        radnici = {}
-        sati = 0
-        for dan in dani:
-            if dan.radnik.ime not in radnici:
-                radnici[dan.radnik.ime] = dan.radio_sati
-            else:
-                radnici[dan.radnik.ime] += dan.radio_sati
-            sati += dan.radio_sati
-        # Create the HttpResponse object with the appropriate PDF headers.
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="{posao}.pdf"'.format(posao=posao.ime)
-
-        # Create the PDF object, using the response object as its "file."
-        p = canvas.Canvas(response)
-        # pagesize=(595.27,841.89)
-        # Draw things on the PDF. Here's where the PDF generation happens.
-        # See the ReportLab documentation for the full list of functionality.
-        prvi_red = "{posao} - {opis}".format(posao=posao.ime, opis=posao.opis)
-        drugi_red = "{pd} - {kd}  Dogovoreno na radni sat: {sat}, dogovoreno po kvadratu: {kv}".format(pd=posao.pocetak_radova.strftime('%d.%m.%Y'), kd=posao.kraj_radova.strftime('%d.%m.%Y'), sat=posao.dogovoreni_radni_sati, kv=posao.dogovoreno_po_kvadratu)
-        p.drawString(50, 820, prvi_red)
-        # p.setStrokeColorRGB(0, 1, 0.3)  # choose your line color
-        p.line(45, 815, 570, 815)
-        p.setFontSize(10)
-        p.drawString(50, 800, drugi_red)
-        p.line(60, 795, 500, 795)
-        p.drawString(60, 780, "Radnici koji su radili na projektu:")
-        p.setFontSize(7)
-        y_radnici = 765
-        for radnik, sat in radnici.iteritems():
-            string = "{sat} sati - {radnik}".format(sat=sat, radnik=radnik)
-            p.drawString(60, y_radnici, string)
-            y_radnici -= 10
-        string = "Ukupno sati: {sati}".format(sati=sati)
-        p.drawString(60, y_radnici, string)
-        y_radnici -= 15
-        p.line(60, y_radnici, 500, y_radnici)
-        p.setFontSize(10)
-        p.drawString(60, y_radnici - 15, "Prihodi:")
-        p.line(60, y_radnici - 20, 160, y_radnici - 20)
-
-        p.setFontSize(7)
-        y = y_radnici - 30
-        svi_prihodi = 0.0
-        svi_rashodi = 0.0
-        for prihod in prihodi:
-            svi_prihodi += prihod.kolicina
-            if len(prihod.vrsta) > 60:
-                prihod.vrsta = prihod.vrsta[:60] + "..."
-            string = "{k} - {p}".format(k=prihod.kolicina, p=prihod.vrsta)
-            p.drawString(60, y, string)
-            y -= 10
-            if y < 100:
-                y = 800
-                stra = "- {strana} -".format(strana=strana)
-                p.drawString(290, 20, stra)
-                p.showPage()
-                strana += 1
-                p.setFontSize(7)
-        p.drawString(60, y, "Ukupno: {svi_prihodi}".format(svi_prihodi=svi_prihodi))
-        y -= 10
-        p.line(60, y, 500, y)
-        p.setFontSize(10)
-        p.drawString(60, y - 10, "Rashodi:")
-        p.line(60, y - 15, 160, y - 15)
-        p.setFontSize(7)
-        y = y - 25
-        for rashod in rashodi:
-            svi_rashodi += rashod.kolicina
-            if len(rashod.vrsta) > 60:
-                rashod.vrsta = rashod.vrsta[:60] + "..."
-            string = "{k} - {p}".format(k=rashod.kolicina, p=rashod.vrsta)
-            p.drawString(60, y, string)
-            y -= 10
-            if y < 100:
-                y = 800
-                stra = "- {strana} -".format(strana=strana)
-                p.drawString(290, 20, stra)
-                p.showPage()
-                strana += 1
-                p.setFontSize(7)
-
-        p.drawString(60, y, "Ukupno: {svi_rashodi}".format(svi_rashodi=svi_rashodi))
-        y -= 10
-        p.line(60, y, 500, y)
-        p.setFontSize(10)
-        dobit = "Dobit: {dobit}".format(dobit=svi_prihodi - svi_rashodi)
-        y -= 15
-        p.drawString(60, y, dobit)
-        y -= 15
-        p.line(60, y, 160, y)
-        p.setFontSize(10)
-        y -= 10
-        p.drawString(60, y, "Komentari:")
-        p.line(60, y - 5, 160, y - 5)
-        y -= 15
-        p.setFontSize(7)
-        kom = 1
-        for komentar in komentari:
-            kom_broj = "- {kom} -".format(kom=kom)
-            p.drawString(60, y, kom_broj)
-            y -= 7
-            redovi = [str(komentar.komentar)[x:x+60] for x in xrange(0, len(str(komentar.komentar)), 60)]
-            for red in redovi:
-                p.drawString(70, y, red)
-                y -= 10
-                if y < 100:
-                    y = 800
-                    stra = "- {strana} -".format(strana=strana)
-                    p.drawString(290, 20, stra)
-                    p.showPage()
-                    strana += 1
-                    p.setFontSize(7)
-            kom += 1
-        # Close the PDF object cleanly, and we're done.
-        stra = "- {strana} -".format(strana=strana)
-        p.drawString(290, 20, stra)
-        p.showPage()
-        p.save()
-        return response
-    else:
-        messages.success(request, "Posao {posao} još nije završen, izveštaj možete napraviti tek kada posao ima datum kraja radova!".format(posao=posao.ime))
-        return HttpResponseRedirect(reverse('projects:index'))
-
-
-def pdf_posao_mesecni_presek(request, posao_id, mesec, godina):
-    posao = Poslovi.objects.get(id=posao_id)
-
-    strana = 1
-    prihodi = posao.prihodi_set.filter(datum__year=godina,
-                              datum__month=mesec)
-    rashodi = posao.rashodi_set.filter(datum__year=godina,
-                              datum__month=mesec)
-    dani = Dan.objects.filter(posao=posao, datum__year=godina,
-                              datum__month=mesec)
-
-    komentari = Komentar.objects.filter(posao=posao)
-    radnici = {}
-    sati = 0
-    for dan in dani:
-        if dan.radnik.ime not in radnici:
-            radnici[dan.radnik.ime] = dan.radio_sati
-        else:
-            radnici[dan.radnik.ime] += dan.radio_sati
-        sati += dan.radio_sati
-    # Create the HttpResponse object with the appropriate PDF headers.
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="{posao} - {mesec}.{godina}.pdf"'.format(posao=posao.ime, mesec=mesec, godina=godina)
-
-    # Create the PDF object, using the response object as its "file."
-    p = canvas.Canvas(response)
-    # pagesize=(595.27,841.89)
-    # Draw things on the PDF. Here's where the PDF generation happens.
-    # See the ReportLab documentation for the full list of functionality.
-    prvi_red = "{posao} - {mesec}.{godina}".format(posao=posao.ime, mesec=mesec, godina=godina)
-    drugi_red = "{pd}  Dogovoreno na radni sat: {sat}, dogovoreno po kvadratu: {kv}".format(pd=posao.pocetak_radova.strftime('%d.%m.%Y'), sat=posao.dogovoreni_radni_sati, kv=posao.dogovoreno_po_kvadratu)
-    p.drawString(50, 820, prvi_red)
-    # p.setStrokeColorRGB(0, 1, 0.3)  # choose your line color
-    p.line(45, 815, 570, 815)
-    p.setFontSize(10)
-    p.drawString(50, 800, drugi_red)
-    p.line(60, 795, 500, 795)
-    p.drawString(60, 780, "Radnici koji rade na projektu:")
-    p.setFontSize(7)
-    y_radnici = 765
-    for radnik, sat in radnici.iteritems():
-        string = "{sat} sati - {radnik}".format(sat=sat, radnik=radnik)
-        p.drawString(60, y_radnici, string)
-        y_radnici -= 10
-    string = "Ukupno sati: {sati}".format(sati=sati)
-    p.drawString(60, y_radnici, string)
-    y_radnici -= 15
-    p.line(60, y_radnici, 500, y_radnici)
-    p.setFontSize(10)
-    p.drawString(60, y_radnici - 15, "Prihodi:")
-    p.line(60, y_radnici - 20, 160, y_radnici - 20)
-
-    p.setFontSize(7)
-    y = y_radnici - 30
-    svi_prihodi = 0.0
-    svi_rashodi = 0.0
-    for prihod in prihodi:
-        svi_prihodi += prihod.kolicina
-        if len(prihod.vrsta) > 60:
-            prihod.vrsta = prihod.vrsta[:60] + "..."
-        string = "{k} - {p}".format(k=prihod.kolicina, p=prihod.vrsta)
-        p.drawString(60, y, string)
-        y -= 10
-        if y < 100:
-            y = 800
-            stra = "- {strana} -".format(strana=strana)
-            p.drawString(290, 20, stra)
-            p.showPage()
-            strana += 1
-            p.setFontSize(7)
-    p.drawString(60, y, "Ukupno: {svi_prihodi}".format(svi_prihodi=svi_prihodi))
-    y -= 10
-    p.line(60, y, 500, y)
-    p.setFontSize(10)
-    p.drawString(60, y - 10, "Rashodi:")
-    p.line(60, y - 15, 160, y - 15)
-    p.setFontSize(7)
-    y = y - 25
-    for rashod in rashodi:
-        svi_rashodi += rashod.kolicina
-        if len(rashod.vrsta) > 60:
-            rashod.vrsta = rashod.vrsta[:60] + "..."
-        string = "{k} - {p}".format(k=rashod.kolicina, p=rashod.vrsta)
-        p.drawString(60, y, string)
-        y -= 10
-        if y < 100:
-            y = 800
-            stra = "- {strana} -".format(strana=strana)
-            p.drawString(290, 20, stra)
-            p.showPage()
-            strana += 1
-            p.setFontSize(7)
-
-    p.drawString(60, y, "Ukupno: {svi_rashodi}".format(svi_rashodi=svi_rashodi))
-    y -= 10
-    p.line(60, y, 500, y)
-    p.setFontSize(10)
-    dobit = "Dobit: {dobit}".format(dobit=svi_prihodi - svi_rashodi)
-    y -= 15
-    p.drawString(60, y, dobit)
-    y -= 15
-    p.line(60, y, 160, y)
-    p.setFontSize(10)
-    y -= 10
-    p.drawString(60, y, "Komentari:")
-    p.line(60, y - 5, 160, y - 5)
-    y -= 15
-    p.setFontSize(7)
-    kom = 1
-    for komentar in komentari:
-        kom_broj = "- {kom} -".format(kom=kom)
-        p.drawString(60, y, kom_broj)
-        y -= 7
-        redovi = [str(komentar.komentar)[x:x+60] for x in xrange(0, len(str(komentar.komentar)), 60)]
-        for red in redovi:
-            p.drawString(70, y, red)
-            y -= 10
-            if y < 100:
-                y = 800
-                stra = "- {strana} -".format(strana=strana)
-                p.drawString(290, 20, stra)
-                p.showPage()
-                strana += 1
-                p.setFontSize(7)
-        kom += 1
-    # Close the PDF object cleanly, and we're done.
-    stra = "- {strana} -".format(strana=strana)
-    p.drawString(290, 20, stra)
-    p.showPage()
-    p.save()
-    return response
-
-
-def pdf_radnik(request, radnik_id):
-    meseci = {'1':'Januar', '2':'Februar', '3':'Mart', '4':'April', '5':'Maj', '6':'Jun', '7':'Jul', '8':'Avgust', '9':'Septembar',
-              '10':'Oktobar', '11':'Novembar', '12':'Decembar'}
-    radnik = Radnik.objects.get(id=radnik_id)
-    current_date = datetime.date.today()
-    preostalo_dana = radnik.ugovor_vazi_do - current_date
-    radnik.dana_do_isteka_ugovora = preostalo_dana.days
-    svi_dani_radnika = Dan.objects.filter(radnik=radnik).order_by('datum')
-    godine = []
-    for dan in svi_dani_radnika:
-        godina_postoji = False
-        mesec_postoji = False
-        for godina in godine:
-            if godina[0] == dan.datum.year:
-                godina_postoji = True
-                break
-        if not godina_postoji:
-            godine.append([dan.datum.year, []])
-        for godina in godine:
-            if godina[0] == dan.datum.year:
-                meseci = godina[1]
-        for mesec in meseci:
-            if mesec[0] == dan.datum.month:
-                mesec_postoji = True
-                break
-        if not mesec_postoji:
-            meseci.append([dan.datum.month, {'radnih_dana': 0,
-                                             'bolovanja': 0,
-                                             'odmora': 0,
-                                             'nedozvoljenog_odsustva': 0,
-                                             'radnih_sati': 0.0}])
-        for mesec in meseci:
-            if mesec[0] == dan.datum.month:
-                dani = mesec[1]
-        if not dan.datum.weekday() == 6:
-            if dan.bolovanje:
-                dani['bolovanja'] += 1
-            elif dan.dozvoljeno_odsustvo:
-                dani['odmora'] += 1
-            elif dan.nedozvoljeno_odsustvo:
-                dani['nedozvoljenog_odsustva'] += 1
-            else:
-                if dan.radio_sati != 0:
-                    dani['radnih_dana'] += 1
-                    dani['radnih_sati'] += dan.radio_sati
-
-
-    strana = 1
-
-    # Create the HttpResponse object with the appropriate PDF headers.
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="{radnik}.pdf"'.format(radnik=radnik.ime)
-
-    # Create the PDF object, using the response object as its "file."
-    p = canvas.Canvas(response)
-    # pagesize=(595.27,841.89)
-    # Draw things on the PDF. Here's where the PDF generation happens.
-    # See the ReportLab documentation for the full list of functionality.
-    prvi_red = "{radnik} - {oib}".format(radnik=radnik.ime, oib=radnik.oib)
-    drugi_red = "Pocetak radnog odnosa: {pocetak}, Ugovor istice: {istice}".format(pocetak=radnik.poceo_raditi.strftime('%d.%m.%Y'), istice=radnik.ugovor_vazi_do.strftime('%d.%m.%Y'))
-    p.drawString(50, 820, prvi_red)
-    # p.setStrokeColorRGB(0, 1, 0.3)  # choose your line color
-    p.line(45, 815, 570, 815)
-    p.setFontSize(10)
-    p.drawString(50, 800, drugi_red)
-    p.line(60, 795, 500, 795)
-    y = 765
-    for godina in godine:
-        p.drawString(60, 780, "{godina}".format(godina=godina[0]))
-        y -= 10
-        p.setFontSize(7)
-
-        for mesec in godina[1]:
-            string = "Mesec: {mesec}".format(mesec=mesec[0])
-            p.drawString(60, y, string)
-            y -= 10
-            for key, value in mesec[1].iteritems():
-                if key == "radnih_dana":
-                    p.drawString(60, y, "Radnih dana: {value}".format(value=value))
-            for key, value in mesec[1].iteritems():
-                if key == "bolovanja":
-                    p.drawString(160, y, "Bolovanja: {value}".format(value=value))
-            for key, value in mesec[1].iteritems():
-                if key == "odmora":
-                    p.drawString(260, y, "Odmora: {value}".format(value=value))
-            for key, value in mesec[1].iteritems():
-                if key == "nedozvoljenog_odsustva":
-                    p.drawString(360, y, "Nedozvoljenog odsustva: {value}".format(value=value))
-            for key, value in mesec[1].iteritems():
-                if key == "radnih_sati":
-                    p.drawString(460, y, "Radnih sati: {value}".format(value=value))
-            y -= 20
-            if y < 100:
-                y = 800
-                stra = "- {strana} -".format(strana=strana)
-                p.drawString(290, 20, stra)
-                p.showPage()
-                strana += 1
-                p.setFontSize(7)
-    # Close the PDF object cleanly, and we're done.
-    stra = "- {strana} -".format(strana=strana)
-    p.drawString(290, 20, stra)
-    p.showPage()
-    p.save()
-    return response
-
-
-def pdf_radnici_mesecni_izvestaj(request, mesec, godina, posao_id):
-    radnici = Radnik.objects.all()
-    Dani = Dan.objects.filter(datum__year=godina,
-                              datum__month=mesec).order_by('datum')
-    Akontacije_za_mesec = Akontacije.objects.filter(mesec=mesec, godina=godina)
-    licni_dohodak_za_mesec = RucnoLD.objects.filter(mesec=mesec, godina=godina)
-    aktivni_poslovi = []
-    for radnik in radnici:
-        if radnik.posao != None and radnik.posao not in aktivni_poslovi:
-            aktivni_poslovi.append(radnik.posao)
-    ukupno = {}
-    radnih_sati = {}
-    ishrana = {}
-    akontacije = {}
-    for radnik in radnici:
-        ukupno[radnik.id] = 0
-        radnih_sati[radnik.id] = 0
-        ishrana[radnik.id] = 0
-        akontacije[radnik.id] = 0
-    for dan in Dani:
-        if dan.radnik.id in ukupno:
-            ukupno[dan.radnik.id] += (dan.radio_sati * dan.radnik.satnica) + dan.ishrana
-            radnih_sati[dan.radnik.id] += dan.radio_sati
-            ishrana[dan.radnik.id] += dan.ishrana
-    for a in Akontacije_za_mesec:
-        if a.radnik.id in ukupno:
-            ukupno[a.radnik.id] -= a.kolicina
-            akontacije[a.radnik.id] += a.kolicina
-    for l in licni_dohodak_za_mesec:
-        if l.radnik.id in ukupno:
-            ukupno[l.radnik.id] += l.kolicina
-
-    svi = sum(ukupno.values())
-
-
-    # Create the HttpResponse object with the appropriate PDF headers.
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="Izvestaj radnika za {mesec}_{godina}.pdf"'.format(mesec=mesec, godina=godina)
-
-    # Create the PDF object, using the response object as its "file."
-    doc = SimpleDocTemplate(response)
-    # container for the 'Flowable' objects
-    elements = []
-    data = [['PREZIME I IME', 'RADNI SAT', 'BROJ RADNIH SATI', 'ISHRANA', 'AKONTACIJA', 'UKUPNO']]
-    for posao in aktivni_poslovi:
-        data.append([])
-        data.append([posao.ime])
-        for radnik in radnici:
-            if radnik.posao == posao:
-                data.append([radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
-
-    data.append([])
-    data.append(['NERASPOREDJENI'])
-    for radnik in radnici:
-        if radnik.posao == None and radnik.u_radnom_odnosu:
-            data.append([radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
-    data.append([])
-    data.append(['VAN RADNOG ODNOSA'])
-    for radnik in radnici:
-        if radnik.posao == None and not radnik.u_radnom_odnosu:
-            data.append([radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
-    data.append([])
-    data.append(['UKUPNO', '', '', '', '', svi])
-    t = Table(data)
-    t.setStyle(TableStyle([('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
-                           ('INNERGRID', (0, 0), (-2, -3), 0.25, colors.black),
-                           ('BOX', (0, 0), (-2, -3), 0.25, colors.black),
-                           ]))
-
-    elements.append(t)
-    # write the document to disk
-    doc.build(elements)
-    return response
-
-
-def posao_delete(request, posao_id):
-    posao = Poslovi.objects.get(id=posao_id)
-    if posao.kraj_radova != None:
-        posao.delete()
-        messages.success(request,
-                         "Posao {posao} je uspešno obrisan iz baze!".format(posao=posao.ime))
-
-        # debug
-        # from django.core.mail import EmailMessage
-        # email = EmailMessage('brisanje', '{posao} obrisan'.format(posao=posao.ime), to=['papulic@yahoo.com'])
-        # email.send()
-        return HttpResponseRedirect(reverse('projects:index'))
-    else:
-        messages.success(request, "Posao {posao} još nije završen, posao možete obrisati tek kada posao ima datum kraja radova!".format(
-                             posao=posao.ime))
-        return HttpResponseRedirect(reverse('projects:index'))
-
-
-def radnik_delete(request, radnik_id):
-    radnik = Radnik.objects.get(id=radnik_id)
-    radnik.delete()
-    messages.success(request, "Radnik {radnik} je uspešno obrisan iz baze!".format(radnik=radnik.ime))
-    return HttpResponseRedirect(reverse('projects:ljudi'))
-
-
-def vozilo_delete(request, vozilo_id):
-    vozilo = Vozilo.objects.get(id=vozilo_id)
-    vozilo.delete()
-    messages.success(request, "Vozilo {vozilo} je uspešno obrisano iz baze!".format(vozilo=vozilo.marka))
-    return HttpResponseRedirect(reverse('projects:vozila'))
-
-
-def sajt(request):
-    return render(request, 'projects/sajt.html')
 
 
 def index(request):
-    # workaround to set user as superuser with firewall
-    # user = User.objects.get(username="papulic")
-    # user.is_staff = True
-    # user.is_admin = True
-    # user.is_superuser = True
-    # user.save()
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        current_date = datetime.date.today()
-        poslovi_zavrseni_pre_vise_od_dve_godine = []
-        poslovi = Poslovi.objects.all()
-        radnici = Radnik.objects.all()
-        for posao in poslovi:
-            if posao.kraj_radova != None:
-                proslo_dana = posao.kraj_radova - current_date
-                if proslo_dana.days < -730:
-                    poslovi_zavrseni_pre_vise_od_dve_godine.append(posao)
-        if len(poslovi_zavrseni_pre_vise_od_dve_godine) > 0:
-            messages.success(request, "U bazi su poslovi stariji od dve godine!")
-        return render(request, 'projects/index.html', {
-            'poslovi': poslovi,
-            'radnici': radnici,
-            'poslovi_zavrseni_pre_vise_od_dve_godine': poslovi_zavrseni_pre_vise_od_dve_godine
+    user = None
+    artikli = Artikal.objects.filter(na_stanju=True).order_by('kategorija')
+    artikli_na_akciji = Artikal.objects.filter(na_akciji=True)
+    artikli_na_akciji_ids = artikli_na_akciji.values_list("id", flat=True)
+    sve_kategorije = Kategorija.objects.all()
+    tipovi = Tip.objects.all()
+    brendovi = Brend.objects.all()
+    # try:
+    #     random_artikli = [artikli[i] for i in random.sample(range(1, len(artikli)), 15)]
+    # except ValueError:
+    #     random_artikli = [artikli[i] for i in random.sample(range(1, len(artikli)), len(artikli) - 1)]
+    random_artikli = Artikal.objects.filter(na_stanju=True).exclude(pk__in=list(artikli_na_akciji_ids)).order_by('-broj_pregleda')[:15]
+
+    if request.user.is_authenticated():
+        user = request.user
+
+    proizvoda_u_korpi = 0
+    try:
+        korpa = user.korpe.get(potvrdjena=False)
+        proizvoda_u_korpi = korpa.ukupno_proizvoda_u_korpi
+    except:
+        pass
+
+    return render(request, 'eprodaja/index.html', {
+            'user': user,
+            'artikli_na_akciji': artikli_na_akciji,
+            'proizvoda_u_korpi': proizvoda_u_korpi,
+            'sve_kategorije': sve_kategorije,
+            'tipovi': tipovi,
+            'brendovi': brendovi,
+            'random_artikli': random_artikli
         })
 
 
-def ljudi(request):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
+def add_artikal(request):
+    user = request.user
+    if user.username != "":
+        artikal_id = request.GET.get('artikal_id', None)
+        artikal = Artikal.objects.get(pk=artikal_id)
+        try:
+            korpa = user.korpe.get(potvrdjena=False)
+        except Korpa.MultipleObjectsReturned:
+            korpa = user.korpe.filter(potvrdjena=False)[0]  # ne sme da se desi
+        except Korpa.DoesNotExist:
+            korpa = Korpa()
+            korpa.user = user
+            korpa.save()
+        unos = Entry(korpa=korpa, artikal=artikal)
+        unos.ukupno = artikal.cena
+        unos.save()
+        korpa.ukupno += artikal.cena
+        korpa.ukupno_proizvoda_u_korpi += 1
+        korpa.save()
+        data = {'proizvoda_u_korpi': korpa.ukupno_proizvoda_u_korpi}
     else:
-        current_date = datetime.date.today()
-        radnici = Radnik.objects.filter(u_radnom_odnosu=True)
-        radnici_otkaz = Radnik.objects.filter(u_radnom_odnosu=False)
-        radnici_filter = RadnikFilter(request.GET, queryset=radnici)
-        for radnik in radnici:
-            preostalo_dana = radnik.ugovor_vazi_do - current_date
-            radnik.dana_do_isteka_ugovora = preostalo_dana.days
-            if radnik.posao != None:
-                radnik.dostupan = False
-            else:
-                radnik.dostupan = True
-            radnik.save()
-
-        return render(request, 'projects/ljudi.html', {
-            'radnici': radnici,
-            'filter': radnici_filter,
-            'radnici_otkaz': radnici_otkaz
-        })
+        messages.add_message(request, messages.INFO, 'Morate biti ulogovani!')
+        data = {'error': True}
+    return JsonResponse(data)
+    # return HttpResponse(
+    #     json.dumps(response_data),
+    #     content_type="application/json")
 
 
-def biranje_meseca(request):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
+def filter(request):
+    artikli = None
+    artikli_za_filter = request.GET.get('artikli_za_filter', None)
+    artikli_za_filter = artikli_za_filter.split("_")
+    kategorija_id = artikli_za_filter[0].split("kategorija")[1]
+    artikli = Artikal.objects.filter(kategorija_id=kategorija_id)
+    if len(artikli_za_filter) > 1:
+        for i in artikli_za_filter:
+            if 'podkategorija' in i:
+                podkategorija_id = i.split("podkategorija")[1]
+                artikli = artikli.filter(podkategorija_id=podkategorija_id)
+            elif 'tip' in i:
+                tip_id = i.split("tip")[1]
+                artikli = artikli.filter(tip_id=tip_id)
+            elif 'brend' in i:
+                brend_id = i.split("brend")[1]
+                artikli = artikli.filter(brend_id=brend_id)
+    if artikli:
+        data = list(artikli.values())
     else:
-        form = DatumForm(request.POST or None)
-        if request.method == 'POST':
-            if form.is_valid():
-                data = form.cleaned_data
-                mesec = data['mesec']
-                godina = data['godina']
-                posao = data['posao']
-                if posao == None:
-                    posao_id = 'SviPoslovi'
-                else:
-                    posao_id = posao.id
-                return HttpResponseRedirect(reverse('projects:monthview-workers', args=(mesec, godina, posao_id)))
-    return render(request, 'projects/biranje_meseca.html', {
-            'form': form
-        })
+        data = {}
+    return JsonResponse(data, safe=False)
 
 
-def biranje_meseca_za_finansije(request):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        form = Datum_finansForm(request.POST or None)
-        if request.method == 'POST':
-            if form.is_valid():
-                data = form.cleaned_data
-                mesec = data['mesec']
-                godina = data['godina']
-                return HttpResponseRedirect(reverse('projects:monthview-projects', args=(mesec, godina)))
-    return render(request, 'projects/biranje_meseca.html', {
-            'form': form
-        })
-
-
-def dodaj_dane(request, mesec, godina, posao_id):
-    dan_dodat = False
-    current_date = datetime.date.today()
-    radnici = Radnik.objects.filter(u_radnom_odnosu=True)
-    doprinos = Doprinos.objects.get(pk=1).iznos
-    for radnik in radnici:
-        if len(radnik.dan_set.all()):
-            last_radnik_day = max([i.datum for i in radnik.dan_set.all()])
+def pretraga(request):
+    pretraga = request.GET.get('pretraga', None)
+    splited = pretraga.split()
+    if len(pretraga) > 5:
+        if Pretraga.objects.filter(pretraga=pretraga).exists():
+            pass
         else:
-            last_radnik_day = radnik.poceo_raditi - datetime.timedelta(days=1)
-        delta = current_date - last_radnik_day
-        for i in range(delta.days + 1):
-            if i != 0:
-                day = (last_radnik_day + datetime.timedelta(days=i))
-                dana_u_mesecu = calendar.monthrange(day.year, day.month)[1]
-                doprinos_za_dan = float(doprinos) / float(dana_u_mesecu)
-                new_day = Dan()
-                new_day.datum = day
-                new_day.radnik = radnik
-                new_day.doprinos = doprinos_za_dan
-                try:
-                    vrsta = "DOPRINOSI_RADNIKA_{id}_{p}_{m}_{g}".format(p=radnik.posao.ime, id=radnik.posao.id, m=day.month, g=day.year)
-                    rashod_doprinos = Rashodi.objects.get(vrsta=vrsta)
-                    rashod_doprinos.kolicina += doprinos_za_dan
-                except:
-                    rashod_doprinos = Rashodi()
-                    rashod_doprinos.posao = radnik.posao
-                    rashod_doprinos.datum = day
-                    rashod_doprinos.kolicina = doprinos_za_dan
-                    rashod_doprinos.vrsta = "DOPRINOSI_RADNIKA_{id}_{p}_{m}_{g}".format(p=radnik.posao.ime, id=radnik.posao.id, m=day.month, g=day.year)
-                rashod_doprinos.save()
-                new_day.save()
-                dan_dodat = True
-                try:
-                    akontacija = Akontacije.objects.get(mesec=day.month, godina=day.year, radnik=radnik)
-                except:
-                    akontacija = Akontacije()
-                    akontacija.radnik = radnik
-                    akontacija.mesec = day.month
-                    akontacija.godina = day.year
-                    akontacija.save()
-                try:
-                    licni_dohodak = RucnoLD.objects.get(mesec=day.month, godina=day.year, radnik=radnik)
-                except:
-                    licni_dohodak = RucnoLD()
-                    licni_dohodak.radnik = radnik
-                    licni_dohodak.mesec = day.month
-                    licni_dohodak.godina = day.year
-                    licni_dohodak.save()
-    if dan_dodat:
-        messages.success(request, "Svi dani do današnjeg datuma su dodati!")
+            if Pretraga.objects.all().count() > 500:
+                pretrage = Pretraga.objects.all()[200:].values_list("id", flat=True)
+                Pretraga.objects.exclude(pk__in=list(pretrage)).delete()
+            nova_pretraga = Pretraga()
+            nova_pretraga.pretraga = pretraga
+            nova_pretraga.save()
+    if len(splited) > 0:
+        artikli = Artikal.objects.filter(opis_za_filter__icontains=splited[0])
+        if len(splited) > 1:
+            for pos, i in enumerate(splited):
+                if pos > 0:
+                    artikli = artikli.filter(opis_za_filter__icontains=i)
+    if artikli:
+        data = list(artikli.values())
     else:
-        messages.success(request, "Svi dani do današnjeg datuma već postoje!")
-    return HttpResponseRedirect(reverse('projects:monthview-workers', args=(mesec, godina, posao_id)))
+        data = {}
+    return JsonResponse(data, safe=False)
+
+def create_modal(request):
+    artikal_id = request.GET.get('artikal_id', None)
+    art = Artikal.objects.get(pk=artikal_id)
+    art.broj_pregleda += 1
+    art.save()
+    artikal = Artikal.objects.filter(pk=artikal_id)
+    slike = Slika.objects.filter(artikal_id=artikal_id)
+    data = [[], []]
+    data[0] = list(artikal.values())
+    data[1] = list(slike.values())
+    return JsonResponse(data, safe=False)
 
 
-def mesecni_izvod_radnika(request, mesec, godina, posao_id):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        if posao_id == 'SviPoslovi':
-            radnici = Radnik.objects.filter(u_radnom_odnosu=True)
-        else:
-            posao = Poslovi.objects.get(id=posao_id)
-            radnici = Radnik.objects.filter(u_radnom_odnosu=True, posao=posao)
-        Dani = Dan.objects.filter(datum__year=godina,
-              datum__month=mesec).order_by('datum')
-        Akontacije_za_mesec = Akontacije.objects.filter(mesec=mesec, godina=godina)
-        licni_dohodci_za_mesec = RucnoLD.objects.filter(mesec=mesec, godina=godina)
-        ukupno = {}
-        dana_bolovanja = {}
-        radnih_sati = {}
-        slobodnih_dana = {}
-        ishrana = {}
-        sve_akontacije = 0
-        for radnik in radnici:
-            ukupno[radnik.id] = 0
-            dana_bolovanja[radnik.id] = 0
-            radnih_sati[radnik.id] = 0
-            slobodnih_dana[radnik.id] = 0
-            ishrana[radnik.id] = 0
-        for dan in Dani:
-            if dan.radnik.id in ukupno:
-                ukupno[dan.radnik.id] += (dan.radio_sati * dan.radnik.satnica) + dan.ishrana
-                radnih_sati[dan.radnik.id] += dan.radio_sati
-                ishrana[dan.radnik.id] += dan.ishrana
-                if dan.bolovanje:
-                    dana_bolovanja[dan.radnik.id] += 1
-                if dan.dozvoljeno_odsustvo:
-                    slobodnih_dana[dan.radnik.id] += 1
-        for a in Akontacije_za_mesec:
-            if a.radnik.id in ukupno:
-                ukupno[a.radnik.id] -= a.kolicina
-                sve_akontacije += a.kolicina
-        for l in licni_dohodci_za_mesec:
-            if l.radnik.id in ukupno:
-                ukupno[l.radnik.id] += l.kolicina
+mail_registracija = """
+Poštovani {username},
 
-        svi = sum(ukupno.values())
-        return render(request, 'projects/mesecni_izvod.html', {
-            'radnici': radnici,
-            'mesec': mesec,
-            'godina': godina,
-            'Dani': Dani,
-            'ukupno': ukupno,
-            'svi': svi,
-            'dana_bolovanja': dana_bolovanja,
-            'radnih_sati': radnih_sati,
-            'slobodnih_dana': slobodnih_dana,
-            'posao_id': posao_id,
-            'akontacije': Akontacije_za_mesec,
-            'ishrana': ishrana,
-            'sve_akontacije': sve_akontacije,
-            'licni_dohodci_za_mesec': licni_dohodci_za_mesec
-        })
+Vaš nalog na sajtu www.nsmobilplus.com je kreiran,
+možete krenuti u sigurnu kupovinu.
 
 
-def mesecni_izvod_poslova(request, mesec, godina):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        svi_poslovi = Poslovi.objects.all()
-        prihodi = Prihodi.objects.filter(datum__year=godina,
-                                         datum__month=mesec)
-        rashodi = Rashodi.objects.filter(datum__year=godina,
-                                         datum__month=mesec)
-        Dani = Dan.objects.filter(datum__year=godina,
-                                  datum__month=mesec)
-        poslovi = []
-        mesecni_prihodi = {}
-        mesecni_rashodi = {}
-        mesecno_dobit = {}
-        radnih_sati = {}
-        dana_smestaja = {}
-        smestaj_finansijski = {}
-        for posao in svi_poslovi:
-            if len(posao.radnik_set.all()) > 0:
-                poslovi.append(posao)
-                mesecni_prihodi[posao.id] = 0
-                mesecni_rashodi[posao.id] = 0
-                radnih_sati[posao.id] = 0
-                dana_smestaja[posao.id] = 0
-                smestaj_finansijski[posao.id] = 0
-                for prihod in posao.prihodi_set.all():
-                    if prihod in prihodi:
-                        mesecni_prihodi[posao.id] += prihod.kolicina
-                for rashod in posao.rashodi_set.all():
-                    if rashod in rashodi:
-                        mesecni_rashodi[posao.id] += rashod.kolicina
-                for dan in posao.dan_set.all():
-                    if dan in Dani:
-                        radnih_sati[posao.id] += dan.radio_sati
-                        if dan.smestaj != 0.0:
-                            dana_smestaja[posao.id] += 1
-                            smestaj_finansijski[posao.id] += dan.smestaj
-                mesecno_dobit[posao.id] = mesecni_prihodi[posao.id] - mesecni_rashodi[posao.id]
-        ukupna_dobit = sum(mesecno_dobit.values())
-        ukupni_prihodi = sum(mesecni_prihodi.values())
-        ukupni_rashodi = sum(mesecni_rashodi.values())
-        return render(request, 'projects/mesecni_izvod_finansije.html', {
-            'poslovi': poslovi,
-            'mesecni_prihodi': mesecni_prihodi,
-            'mesecni_rashodi': mesecni_rashodi,
-            'mesecno_dobit': mesecno_dobit,
-            'mesec': mesec,
-            'godina': godina,
-            'ukupna_dobit': ukupna_dobit,
-            'ukupni_prihodi': ukupni_prihodi,
-            'ukupni_rashodi': ukupni_rashodi,
-            'radnih_sati': radnih_sati,
-            'dana_smestaja': dana_smestaja,
-            'smestaj_finansijski': smestaj_finansijski
-        })
+Srdačno,
 
+vaš NSMOBILPLUS
 
-def vozila(request):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        current_date = datetime.date.today()
-        vozila = Vozilo.objects.all()
-        istek_registracije = {}
-        for vozilo in vozila:
-            preostalo_dana = vozilo.registracija_istice - current_date
-            istek_registracije[vozilo.id] = preostalo_dana.days
-
-        return render(request, 'projects/vozila.html', {
-            'vozila': vozila,
-            'istek_registracije': istek_registracije
-        })
-
-
-def create_project(request):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        poslovi = Poslovi.objects.all()
-        form = PosloviForm(request.POST or None)
-        projects_list = []
-        for i in poslovi:
-            projects_list.append(str(i))
-        if request.method == 'POST':
-            if form.is_valid():
-                project = form.save(commit=False)
-
-                if str(project) in projects_list:
-                    messages.success(request, "Ovaj projekat već postoji!")
-                    return HttpResponseRedirect(reverse('projects:index'))
-                else:
-                    project.save()
-                    return HttpResponseRedirect(reverse('projects:index'))
-        context = {
-            "form": form,
-
-        }
-        return render(request, 'projects/project_form.html', context)
-
-
-def create_radnik(request):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        form = RadnikForm(request.POST or None)
-        if request.method == 'POST':
-            if form.is_valid():
-                radnik = form.save(commit=False)
-                radnik.save()
-                form.save_m2m()
-                messages.success(request, "Radnik '{radnik}' je dodat!".format(radnik=radnik.ime))
-                return HttpResponseRedirect(reverse('projects:ljudi'))
-        context = {
-            "form": form,
-        }
-        return render(request, 'projects/dodavanje_radnika.html', context)
-
-
-def create_zanimanje(request):
-    form = ZanimanjeForm(request.POST or None)
-    if request.method == 'POST':
-        if form.is_valid():
-            zanimanje = form.save(commit=False)
-            zanimanja = Zanimanja.objects.all()
-            sva_zanimanja = []
-            for z in zanimanja:
-                sva_zanimanja.append(z.zanimanje.upper())
-            if zanimanje.zanimanje.upper() in sva_zanimanja:
-                messages.success(request, "Zanimanje '{zanimanje}' već postoji!".format(zanimanje=zanimanje.zanimanje))
-            else:
-                zanimanje.save()
-                messages.success(request, "Zanimanje '{zanimanje}' je dodato!".format(zanimanje=zanimanje.zanimanje))
-            return HttpResponseRedirect(reverse('projects:ljudi'))
-    context = {
-        "form": form,
-    }
-    return render(request, 'projects/dodavanje_zanimanja.html', context)
-
-
-def create_vozilo(request):
-    form = VoziloForm(request.POST or None)
-    if request.method == 'POST':
-        if form.is_valid():
-            vozilo = form.save(commit=False)
-            vozilo.save()
-            messages.success(request, "Vozilo '{vozilo}' je dodato!".format(vozilo=vozilo.marka))
-            return HttpResponseRedirect(reverse('projects:vozila'))
-    context = {
-        "form": form,
-    }
-    return render(request, 'projects/dodavanje_vozila.html', context)
-
-
-def detail(request, project_id):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        message = ""
-        current_date = datetime.date.today()
-        project = get_object_or_404(Poslovi, pk=project_id)
-        Dani = Dan.objects.filter(posao=project)
-        radni_sati_svih_radnika = 0.0
-        dana_smestaja_svih_radnika = 0
-        for dan in Dani:
-            radni_sati_svih_radnika += dan.radio_sati
-            if dan.smestaj != 0.0:
-                dana_smestaja_svih_radnika += 1
-        if project.kraj_radova:
-            preostalo_dana = project.kraj_radova - current_date
-        else:
-            preostalo_dana = 100
-        # get only prihodi and rashodi for current project
-        prihodi = Prihodi.objects.filter(posao=project)
-        rashodi = Rashodi.objects.filter(posao=project)
-        # calculate rashodi and prihodi in total
-        ukupni_rashodi = 0.0
-        ukupni_prihodi = 0.0
-        for rashod in rashodi:
-            ukupni_rashodi += rashod.kolicina
-        for prihod in prihodi:
-            ukupni_prihodi += prihod.kolicina
-        dobit = ukupni_prihodi - ukupni_rashodi
-        # get only available workers
-        dostupni_radnici = Radnik.objects.filter(dostupan=True, u_radnom_odnosu=True)
-        zanimanja_filter = ZanimanjeFilter(request.GET, queryset=dostupni_radnici)
-        # form = RadnikForm(request.POST or None)
-        if request.POST.getlist('listdodaj'):
-            for radnik_id in request.POST.getlist('listdodaj'):
-                radnik = Radnik.objects.get(pk=radnik_id)
-                radnik.dostupan = False
-                radnik.posao = project
-                radnik.save()
-        elif request.POST.getlist('listskini'):
-            for radnik_id in request.POST.getlist('listskini'):
-                radnik = Radnik.objects.get(pk=radnik_id)
-                radnik.dostupan = True
-                radnik.posao = None
-                radnik.save()
-        if isinstance(preostalo_dana, datetime.timedelta):
-            if preostalo_dana.days < 0:
-                radnici_na_projektu = Radnik.objects.filter(posao=project)
-                for radnik in radnici_na_projektu:
-                    radnik.dostupan = True
-                    radnik.posao = None
-                    radnik.save()
-                message = "Ne možete više dodati radnike na ovaj posao!"
-        return render(request, 'projects/poslovi.html', {
-            'posao': project,
-            'project_id': project_id,
-            'dostupni_radnici': dostupni_radnici,
-            'filter': zanimanja_filter,
-            'prihodi': prihodi,
-            'rashodi': rashodi,
-            'ukupni_rashodi': ukupni_rashodi,
-            'ukupni_prihodi': ukupni_prihodi,
-            'dobit': dobit,
-            'message': message,
-            'radni_sati_svih_radnika': radni_sati_svih_radnika,
-            'dana_smestaja_svih_radnika': dana_smestaja_svih_radnika
-        })
-
-
-def radnik_detail(request, radnik_id):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        radnik = get_object_or_404(Radnik, pk=radnik_id)
-        current_date = datetime.date.today()
-        preostalo_dana = radnik.ugovor_vazi_do - current_date
-        radnik.dana_do_isteka_ugovora = preostalo_dana.days
-        svi_dani_radnika = Dan.objects.filter(radnik=radnik).order_by('datum')
-        # godine = {}
-        # for dan in svi_dani_radnika:
-        #     if dan.datum.year not in godine:
-        #         godine[dan.datum.year] = {}
-        #     if dan.datum.month not in godine[dan.datum.year]:
-        #         godine[dan.datum.year][dan.datum.month] = []
-        #     godine[dan.datum.year][dan.datum.month].append(dan)
-        godine = []
-        for dan in svi_dani_radnika:
-            godina_postoji = False
-            mesec_postoji = False
-            for godina in godine:
-                if godina[0] == dan.datum.year:
-                    godina_postoji = True
-                    break
-            if not godina_postoji:
-                godine.append([dan.datum.year, []])
-            for godina in godine:
-                if godina[0] == dan.datum.year:
-                    meseci = godina[1]
-            for mesec in meseci:
-                if mesec[0] == dan.datum.month:
-                    mesec_postoji = True
-                    break
-            if not mesec_postoji:
-                meseci.append([dan.datum.month, {'radnih_dana': 0,
-                                                 'bolovanja': 0,
-                                                 'odmora': 0,
-                                                 'nedozvoljenog_odsustva': 0,
-                                                 'radnih_sati': 0.0}])
-            for mesec in meseci:
-                if mesec[0] == dan.datum.month:
-                    dani = mesec[1]
-            if not dan.datum.weekday() == 6:
-                if dan.bolovanje:
-                    dani['bolovanja'] += 1
-                elif dan.dozvoljeno_odsustvo:
-                    dani['odmora'] += 1
-                elif dan.nedozvoljeno_odsustvo:
-                    dani['nedozvoljenog_odsustva'] += 1
-                else:
-                    if dan.radio_sati != 0:
-                        dani['radnih_dana'] += 1
-                        dani['radnih_sati'] += dan.radio_sati
-
-
-
-        if radnik.posao != None:
-            radnik.dostupan = False
-        else:
-            radnik.dostupan = True
-        radnik.save()
-        return render(request, 'projects/radnik_detalji.html', {
-            'radnik': radnik,
-            'radnik_id': radnik_id,
-            'godine': godine
-        })
-
-
-def vozilo_detail(request, vozilo_id):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        vozilo = get_object_or_404(Vozilo, pk=vozilo_id)
-        current_date = datetime.date.today()
-        preostalo_dana = (vozilo.registracija_istice - current_date).days
-        ukupni_troskovi = 0
-        for rashod in vozilo.rashodi_set.all():
-            ukupni_troskovi += rashod.kolicina
-        return render(request, 'projects/vozilo_detalji.html', {
-            'vozilo': vozilo,
-            'vozilo_id': vozilo_id,
-            'preostalo_dana': preostalo_dana,
-            'ukupni_troskovi': ukupni_troskovi
-        })
-
-
-def posao_update(request, project_id):
-    instance = Poslovi.objects.get(pk=project_id)
-    form = PosloviForm(request.POST or None, instance=instance)
-    if form.is_valid():
-        project = form.save(commit=False)
-        project.save()
-        messages.success(request, "Podaci su ažurirani!")
-        return HttpResponseRedirect(reverse('projects:posao', args=(project_id)))
-    context = {
-        "form": form,
-        'project_id': project_id,
-    }
-    return render(request, 'projects/posao_update_form.html', context)
-
-
-def vozilo_update(request, vozilo_id):
-    instance = Vozilo.objects.get(pk=vozilo_id)
-    form = VoziloForm(request.POST or None, instance=instance)
-    if form.is_valid():
-        vozilo = form.save(commit=False)
-        vozilo.save()
-        messages.success(request, "Podaci su ažurirani!")
-        return HttpResponseRedirect(reverse('projects:vozilo-detail', args=(vozilo_id)))
-    context = {
-        "form": form,
-        'vozilo_id': vozilo_id,
-    }
-    return render(request, 'projects/vozilo_update.html', context)
-
-
-def dan_update(request, dan_id, posao_id):
-    current_date = datetime.date.today()
-    instance = Dan.objects.get(pk=dan_id)
-    old_radio_sati = instance.radio_sati
-    old_ishrana = instance.ishrana
-    old_smestaj = instance.smestaj
-    form = DanForm(request.POST or None, instance=instance)
-    if form.is_valid():
-        dan = form.save(commit=False)
-        dan.posao = dan.radnik.posao
-        dan.save()
-        if dan.posao != None:
-            if dan.posao.kraj_radova != None:
-                preostalo_dana = dan.posao.kraj_radova - current_date
-                preostalo_dana = preostalo_dana.days
-            else:
-                preostalo_dana = 100
-            if preostalo_dana > 0:
-                try:
-                    rashod = Rashodi.objects.get(vrsta="SATNICA_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year))
-                except:
-                    pass
-                try:
-                    rashod.kolicina += dan.radio_sati * dan.radnik.satnica
-                except:
-                    rashod = Rashodi()
-                    rashod.posao = dan.posao
-                    rashod.kolicina = dan.radio_sati * dan.radnik.satnica
-                    rashod.datum = dan.datum
-                    rashod.vrsta = "SATNICA_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year)
-                if old_radio_sati != 0.0 and rashod.kolicina != dan.radio_sati * dan.radnik.satnica:
-                    rashod.kolicina -= old_radio_sati * dan.radnik.satnica
-                rashod.save()
-                if dan.ishrana != 0.0:
-                    try:
-                        rashod_ishrana = Rashodi.objects.get(vrsta="ISHRANA_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year))
-                    except:
-                        pass
-                    try:
-                        rashod_ishrana.kolicina += dan.ishrana
-                    except:
-                        rashod_ishrana = Rashodi()
-                        rashod_ishrana.posao = dan.posao
-                        rashod_ishrana.datum = dan.datum
-                        rashod_ishrana.kolicina = dan.ishrana
-                        rashod_ishrana.vrsta = "ISHRANA_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year)
-                    if old_ishrana != 0.0:
-                        rashod_ishrana.kolicina -= old_ishrana
-                        rashod_ishrana.kolicina += dan.ishrana
-                    rashod_ishrana.save()
-                ###############################################################
-                if dan.smestaj != 0.0:
-                    try:
-                        rashod_smestaj = Rashodi.objects.get(vrsta="SMESTAJ_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year))
-                    except:
-                        pass
-                    try:
-                        rashod_smestaj.kolicina += dan.smestaj
-                    except:
-                        rashod_smestaj = Rashodi()
-                        rashod_smestaj.posao = dan.posao
-                        rashod_smestaj.datum = dan.datum
-                        rashod_smestaj.kolicina = dan.smestaj
-                        rashod_smestaj.vrsta = "SMESTAJ_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year)
-                    if old_smestaj != 0.0:
-                        rashod_smestaj.kolicina -= old_smestaj
-                        rashod_smestaj.kolicina += dan.smestaj
-                    rashod_smestaj.save()
-                ###############################################################
-                if dan.posao.dogovoreni_radni_sati != 0.0:
-                    try:
-                        prihod = Prihodi.objects.get(vrsta="SATNICA_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year))
-                    except:
-                        pass
-                    try:
-                        if dan.radnik.klasa == "klasa_2":
-                            prihod.kolicina += dan.posao.dogovoreni_radni_sati_klasa_2 * dan.radio_sati
-                        elif dan.radnik.klasa == "klasa_3":
-                            prihod.kolicina += dan.posao.dogovoreni_radni_sati_klasa_3 * dan.radio_sati
-                        elif dan.radnik.klasa == "klasa_4":
-                            prihod.kolicina += dan.posao.dogovoreni_radni_sati_klasa_4 * dan.radio_sati
-                        elif dan.radnik.klasa == "klasa_5":
-                            prihod.kolicina += dan.posao.dogovoreni_radni_sati_klasa_5 * dan.radio_sati
-                        else:
-                            prihod.kolicina += dan.posao.dogovoreni_radni_sati * dan.radio_sati
-                    except:
-                        prihod = Prihodi()
-                        prihod.posao = dan.posao
-                        prihod.datum = dan.datum
-                        if dan.radnik.klasa == "klasa_2":
-                            prihod.kolicina = dan.posao.dogovoreni_radni_sati_klasa_2 * dan.radio_sati
-                        elif dan.radnik.klasa == "klasa_3":
-                            prihod.kolicina = dan.posao.dogovoreni_radni_sati_klasa_3 * dan.radio_sati
-                        elif dan.radnik.klasa == "klasa_4":
-                            prihod.kolicina = dan.posao.dogovoreni_radni_sati_klasa_4 * dan.radio_sati
-                        elif dan.radnik.klasa == "klasa_5":
-                            prihod.kolicina = dan.posao.dogovoreni_radni_sati_klasa_5 * dan.radio_sati
-                        else:
-                            prihod.kolicina = dan.posao.dogovoreni_radni_sati * dan.radio_sati
-                        prihod.vrsta = "SATNICA_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year)
-                    if dan.radnik.klasa == "klasa_2":
-                        if old_radio_sati != 0.0 and prihod.kolicina != dan.posao.dogovoreni_radni_sati_klasa_2 * dan.radio_sati:
-                            prihod.kolicina -= old_radio_sati * dan.posao.dogovoreni_radni_sati_klasa_2
-                    elif dan.radnik.klasa == "klasa_3":
-                        if old_radio_sati != 0.0 and prihod.kolicina != dan.posao.dogovoreni_radni_sati_klasa_3 * dan.radio_sati:
-                            prihod.kolicina -= old_radio_sati * dan.posao.dogovoreni_radni_sati_klasa_3
-                    elif dan.radnik.klasa == "klasa_4":
-                        if old_radio_sati != 0.0 and prihod.kolicina != dan.posao.dogovoreni_radni_sati_klasa_4 * dan.radio_sati:
-                            prihod.kolicina -= old_radio_sati * dan.posao.dogovoreni_radni_sati_klasa_4
-                    elif dan.radnik.klasa == "klasa_5":
-                        if old_radio_sati != 0.0 and prihod.kolicina != dan.posao.dogovoreni_radni_sati_klasa_5 * dan.radio_sati:
-                            prihod.kolicina -= old_radio_sati * dan.posao.dogovoreni_radni_sati_klasa_5
-                    else:
-                        if old_radio_sati != 0.0 and prihod.kolicina != dan.posao.dogovoreni_radni_sati * dan.radio_sati:
-                            prihod.kolicina -= old_radio_sati * dan.posao.dogovoreni_radni_sati
-                    prihod.save()
-        return HttpResponseRedirect(reverse('projects:monthview-workers', args=(dan.datum.month, dan.datum.year, posao_id)))
-    context = {
-        "form": form,
-        'dan_id': dan_id,
-        'instance': instance
-    }
-    return render(request, 'projects/dan_update.html', context)
-
-
-def akontacija_update(request, mesec, godina, posao_id, akontacija_id):
-    instance = Akontacije.objects.get(pk=akontacija_id)
-    form = AkontacijeForm(request.POST or None, instance=instance)
-    if form.is_valid():
-        akontacija = form.save(commit=False)
-        akontacija.save()
-        return HttpResponseRedirect(reverse('projects:monthview-workers', args=(mesec, godina, posao_id)))
-    context = {
-        "form": form,
-        'instance': instance,
-    }
-    return render(request, 'projects/akontacija_update.html', context)
-
-
-def licni_dohodak_update(request, mesec, godina, posao_id, ld_id):
-    instance = RucnoLD.objects.get(pk=ld_id)
-    form = RucnoLDForm(request.POST or None, instance=instance)
-    if form.is_valid():
-        ld = form.save(commit=False)
-        ld.save()
-        return HttpResponseRedirect(reverse('projects:monthview-workers', args=(mesec, godina, posao_id)))
-    context = {
-        "form": form,
-        'instance': instance,
-    }
-    return render(request, 'projects/ld_update.html', context)
-
-
-
-def radnik_update(request, radnik_id):
-    instance = Radnik.objects.get(pk=radnik_id)
-    form = RadnikForm(request.POST or None, instance=instance)
-    if form.is_valid():
-        radnik = form.save(commit=False)
-        radnik.save()
-        form.save_m2m()
-        messages.success(request, "Podaci su ažurirani!")
-        return HttpResponseRedirect(reverse('projects:radnik-detail', kwargs={'radnik_id':int(radnik_id)}))
-    context = {
-        "form": form,
-        'radnik_id': radnik_id,
-    }
-    return render(request, 'projects/radnik_update.html', context)
-
-
-def create_prihod(request, project_id):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        instance = Poslovi.objects.get(pk=project_id)
-        form = PrihodiForm(request.POST or None)
-        if request.method == 'POST':
-            if form.is_valid():
-                prihod = form.save(commit=False)
-                prihod.posao = instance
-                prihod.save()
-                return HttpResponseRedirect(reverse('projects:posao', args=(project_id)))
-        context = {
-            "form": form,
-
-        }
-        return render(request, 'projects/create_prihod.html', context)
-
-
-def prihod_delete(request, project_id, prihod_id):
-    prihod = get_object_or_404(Prihodi, id=prihod_id)
-    prihod.delete()
-    return HttpResponseRedirect(reverse('projects:posao', args=(project_id)))
-
-
-def create_rashod(request, project_id):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        instance = Poslovi.objects.get(pk=project_id)
-        form = RashodiForm(request.POST or None)
-        if request.method == 'POST':
-            if form.is_valid():
-                rashod = form.save(commit=False)
-                rashod.posao = instance
-                rashod.save()
-                return HttpResponseRedirect(reverse('projects:posao', args=(project_id)))
-        context = {
-            "form": form,
-
-        }
-        return render(request, 'projects/create_rashod.html', context)
-
-
-def rashod_delete(request, project_id, rashod_id):
-    rashod = Rashodi.objects.get(pk=rashod_id)
-    rashod.delete()
-    return HttpResponseRedirect(reverse('projects:posao', args=(project_id)))
-
-def create_komentar(request, project_id):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        instance = Poslovi.objects.get(pk=project_id)
-        form = KomentarForm(request.POST or None)
-        if request.method == 'POST':
-            if form.is_valid():
-                komentar = form.save(commit=False)
-                komentar.posao = instance
-                komentar.save()
-                return HttpResponseRedirect(reverse('projects:posao', args=(project_id)))
-        context = {
-            "form": form,
-        }
-        return render(request, 'projects/create_komentar.html', context)
-
-
-def komentar_detail(request, komentar_id):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        komentar = get_object_or_404(Komentar, pk=komentar_id)
-        return render(request, 'projects/komentar_detalji.html', {
-            'komentar': komentar
-        })
-
-
-def komentar_update(request, komentar_id):
-    instance = Komentar.objects.get(pk=komentar_id)
-    form = KomentarForm(request.POST or None, instance=instance)
-    if form.is_valid():
-        komentar = form.save(commit=False)
-        komentar.save()
-        messages.success(request, "Komentar je izmenjen!")
-        return HttpResponseRedirect(reverse('projects:komentar-detail', args=(komentar_id)))
-    context = {
-        "form": form,
-        'komentar': komentar_id,
-    }
-    return render(request, 'projects/komentar_update.html', context)
-
-
-def komentar_delete(request, project_id, komentar_id):
-    komentar = Komentar.objects.get(pk=komentar_id)
-    komentar.delete()
-    return HttpResponseRedirect(reverse('projects:posao', args=(project_id)))
-
-
-def create_kvadrat(request, project_id):
-    if not request.user.is_authenticated():
-        return render(request, 'projects/login.html')
-    else:
-        instance = Poslovi.objects.get(pk=project_id)
-        form = KvadratForm(request.POST or None)
-        if request.method == 'POST':
-            if form.is_valid():
-                data = form.cleaned_data
-                datum = data['datum']
-                kolicina = data['kolicina']
-                prihod = Prihodi()
-                prihod.posao = instance
-                prihod.datum = datum
-                prihod.vrsta = "{kolicina} KVADRATA URADJENO".format(kolicina=kolicina)
-                prihod.kolicina = kolicina * instance.dogovoreno_po_kvadratu
-                prihod.save()
-                return HttpResponseRedirect(reverse('projects:posao', args=(project_id)))
-        context = {
-            "form": form,
-
-        }
-        return render(request, 'projects/create_rashod.html', context)
-
-
-def delete_posao_and_create_log(request, posao):
-    pass
+Jevrejska 19, 21000 Novi Sad
+"""
 
 
 def login_user(request):
+    loginForm = UserLoginForm(request.POST or None)
+    registerForm = UserRegisterForm(request.POST or None)
+    detaljiForm = DetaljiForm(request.POST or None)
     if request.method == "POST":
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(username=username, password=password)
-        if user is not None:
-            if user.is_active:
-                login(request, user)
-                return HttpResponseRedirect('/administracija')
+        if "logovanje_korisnika" in request.POST and loginForm.is_valid():
+            registerForm = UserRegisterForm() # prevent auto populate
+            detaljiForm = DetaljiForm()
+            username = request.POST['username']
+            password = request.POST['password']
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                if user.is_active:
+                    login(request, user)
+                    messages.warning(request, '{username}, dobrodošli!'.format(username=user.username))
+                    return HttpResponseRedirect('/')
+                else:
+                    messages.error(request, 'Vaš nalog je suspendovan')
+                    # return render(request, 'eprodaja/login.html', {'error_message': 'Vaš nalog je suspendovan'})
             else:
-                return render(request, 'projects/login.html', {'error_message': 'Nalog je deaktiviran'})
-        else:
-            return render(request, 'projects/login.html', {'error_message': 'Neuspešno logovanje'})
-    return render(request, 'projects/login.html')
+                messages.error(request, 'Pogrešno korisničko ime ili lozinka')
+                # return render(request, 'eprodaja/login.html', {'error_message': 'Pogrešno korisničko ime ili lozinka'})
+        if "registrovanje_korisnika" in request.POST and registerForm.is_valid():
+            error = False
+            loginForm = UserLoginForm() # prevent auto populate
+            username = request.POST['username']
+            ime = request.POST['ime']
+            prezime = request.POST['prezime']
+            email = request.POST['email']
+            password = request.POST['password']
+            password_2 = request.POST['password_2']
+            adresa = request.POST['adresa']
+            postanski_broj = request.POST['postanski_broj']
+            grad = request.POST['grad']
+            kontakt_telefon = request.POST['kontakt_telefon']
+            if User.objects.filter(username=username).exists():
+                messages.error(request, "Korisničko ime '{username}' je zauzeto, molim vas izaberite drugo".format(
+                    username=username))
+                error = True
+            if User.objects.filter(email=email).exists():
+                messages.error(request,
+                               "Korisnik sa email adresom '{email}' postoji, molim vas unesite drugu email adresu".format(
+                                   email=email))
+                error = True
+            if len(password) < 6:
+                messages.error(request, 'Lozinka mora imati najmanje 6 karaktera')
+                error = True
+            if password != password_2:
+                messages.error(request, 'Pogrešna lozinka')
+                error = True
+            if not error:
+                user = User.objects.create_user(username=username,
+                                                password=password,
+                                                email=email,
+                                                first_name=ime,
+                                                last_name=prezime
+                                                )
+                user.save()
+                detalji = Detalji_korisnika()
+                detalji.korisnik = user
+                detalji.adresa = adresa
+                detalji.postanski_broj = postanski_broj
+                detalji.grad = grad
+                detalji.kontakt_telefon = kontakt_telefon
+                detalji.save()
+                user = authenticate(username=username, password=password)
+                if user is not None:
+                    if user.is_active:
+                        login(request, user)
+                        # email = EmailMessage('NSMOBILPLUS | Novi nalog', mail_registracija.format(username=user.username), to=[user.email])
+                        # email.send()
+                        messages.success(request, '{username}, vaš nalog je uspešno kreiran. Hvala!'.format(username=username))
+                        return HttpResponseRedirect('/')
+    return render(request, 'eprodaja/login.html', {
+            'loginForm': loginForm,
+            'registerForm': registerForm,
+            'detaljiForm': detaljiForm
+        })
 
 
 def logout_user(request):
+    try:
+        user = request.user
+    except:
+        user = "Korisnik"
     logout(request)
-    form = UserForm(request.POST or None)
-    context = {
-        "form": form,
-    }
-    return render(request, 'projects/login.html', context)
+    messages.warning(request, 'Doviđenja {username}, dođite nam opet!'.format(username=user.username))
+    return HttpResponseRedirect(reverse('eprodaja:index'))
+
+
+def kontakt(request):
+    user = None
+    proizvoda_u_korpi = 0
+    if request.user.is_authenticated():
+        user = request.user
+        try:
+            korpa = user.korpe.get(potvrdjena=False)
+            proizvoda_u_korpi = korpa.ukupno_proizvoda_u_korpi
+        except:
+            pass
+    if request.method == "POST":
+        username = request.POST['name']
+        email = request.POST['email']
+        tema = request.POST['subject']
+        poruka = request.POST['message']
+        nova_poruka = Poruke()
+        nova_poruka.user = user
+        nova_poruka.tema = tema
+        nova_poruka.poruka = poruka
+        nova_poruka.save()
+        messages.warning(request, '{username}, hvala vam što ste nas kontaktirali!'.format(username=username))
+        return HttpResponseRedirect(reverse('eprodaja:kontakt'))
+    return render(request, 'eprodaja/contact-us.html', {'user': user, 'proizvoda_u_korpi': proizvoda_u_korpi})
+
+
+def nalog(request, user_id):
+    user = User.objects.get(pk=user_id)
+    detalji_korisnika = Detalji_korisnika.objects.get(korisnik=user)
+    korpe = Korpa.objects.filter(user=user, potvrdjena=True).order_by('-datum')
+    proizvoda_u_korpi = 0
+    try:
+        korpa = user.korpe.get(potvrdjena=False)
+        proizvoda_u_korpi = korpa.ukupno_proizvoda_u_korpi
+    except:
+        pass
+    if request.method == "POST":
+        adresa = request.POST['adresa']
+        postanski_broj = request.POST['postanski_broj']
+        grad = request.POST['grad']
+        kontakt_telefon = request.POST['kontakt_telefon']
+        detalji_korisnika.adresa = adresa
+        detalji_korisnika.postanski_broj = postanski_broj
+        detalji_korisnika.grad = grad
+        detalji_korisnika.kontakt_telefon = kontakt_telefon
+        detalji_korisnika.save()
+        messages.success(request, 'Podaci su ažurirani!')
+        return HttpResponseRedirect('/nalog/{user_id}'.format(user_id=user_id))
+    return render(request, 'eprodaja/account.html', {'user': user, 'korpe': korpe, 'proizvoda_u_korpi': proizvoda_u_korpi})
+
+
+def korpa(request, user_id):
+    user = User.objects.get(pk=user_id)
+    if request.method == 'POST':
+        izmena_na_unosu = False
+        if 'unos' in request.POST:
+            unos_id = request.POST['unos']
+            unos = Entry.objects.get(pk=unos_id)
+            if 'quantity_up' in request.POST:
+                unos.quantity += 1
+                unos.ukupno += unos.artikal.cena
+                unos.save()
+                izmena_na_unosu = True
+            elif 'quantity_down' in request.POST:
+                if unos.quantity <= 1:
+                    pass
+                else:
+                    unos.quantity -= 1
+                    unos.ukupno -= unos.artikal.cena
+                    unos.save()
+                    izmena_na_unosu = True
+        if 'brisi_unos' in request.POST:
+            unos_id = request.POST['brisi_unos']
+            unos = Entry.objects.get(pk=unos_id)
+            unos.delete()
+            izmena_na_unosu = True
+        if izmena_na_unosu:
+            korpa = Korpa.objects.get(user=user, potvrdjena=False)
+            unosi = korpa.entry_set.all()
+            proizvoda_u_korpi = 0
+            korpa_ukupno = 0
+            x_exp = (x for x in unosi)
+            for i in x_exp:
+                proizvoda_u_korpi += i.quantity
+                korpa_ukupno += i.ukupno
+            korpa.ukupno_proizvoda_u_korpi = proizvoda_u_korpi
+            korpa.ukupno = korpa_ukupno
+            korpa.save()
+        return HttpResponseRedirect('/korpa/{user_id}'.format(user_id=user_id))
+    try:
+        korpa = Korpa.objects.get(user=user, potvrdjena=False)
+        unosi = korpa.entry_set.all()
+        proizvoda_u_korpi = korpa.ukupno_proizvoda_u_korpi
+    except Korpa.DoesNotExist:
+        korpa = None
+        unosi = None
+        proizvoda_u_korpi = 0
+
+    return render(request, 'eprodaja/cart.html', {'user': user,
+                                                  'korpa': korpa,
+                                                  'unosi': unosi,
+                                                  'proizvoda_u_korpi': proizvoda_u_korpi})
+
+
+def korpa_detalji(request, korpa_id):
+    korpa = Korpa.objects.get(pk=korpa_id)
+    unosi = korpa.entry_set.all()
+    return render(request, 'eprodaja/korpa_detalji.html', {'korpa': korpa, 'unosi': unosi})
+
+
+def potvrdi_korpu(request, korpa_id):
+    korpa = Korpa.objects.get(pk=korpa_id)
+    error = False
+    if korpa.user.detalji_korisnika.adresa == "":
+        messages.error(request, 'Molim vas unesite ispravne podatke "Ulica i broj".')
+        error = True
+    elif korpa.user.detalji_korisnika.postanski_broj == "":
+        messages.error(request, 'Molim vas unesite ispravne podatke "Poštanski broj".')
+        error = True
+    elif korpa.user.detalji_korisnika.grad == "":
+        messages.error(request, 'Molim vas unesite ispravne podatke "Grad".')
+        error = True
+    elif korpa.user.detalji_korisnika.kontakt_telefon == "":
+        messages.error(request, 'Molim vas unesite ispravne podatke "Kontakt telefon".')
+        error = True
+    if error:
+        return HttpResponseRedirect('/nalog/{user_id}#adresa'.format(user_id=korpa.user.id))
+    korpa.potvrdjena = True
+    korpa.datum = datetime.date.today()
+    korpa.save()
+    messages.success(request, 'Hvala na kupovini! Detalje o vašim porudžbinama možete videti u sekciji Moj nalog.')
+    return HttpResponseRedirect("/")
+
+
+# treba ako nema jquery
+# def artikal_detalji(request, artikal_id):
+#     artikal = Artikal.objects.get(pk=artikal_id)
+#     artikal.broj_pregleda += 1
+#     artikal.save()
+#     ostale_slike = Slika.objects.filter(artikal=artikal)
+#     proizvoda_u_korpi = 0
+#     user = request.user
+#     try:
+#         korpa = user.korpe.get(potvrdjena=False)
+#         proizvoda_u_korpi = korpa.ukupno_proizvoda_u_korpi
+#     except:
+#         pass
+#     return render(request, 'eprodaja/product-details.html', {'artikal': artikal, 'ostale_slike': ostale_slike, 'proizvoda_u_korpi': proizvoda_u_korpi})
+
+def error_404(request):
+    return render(request, 'eprodaja/404.html')
