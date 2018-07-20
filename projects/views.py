@@ -712,31 +712,35 @@ def mesecni_izvod_poslova(request, mesec, godina):
         dana_smestaja = {}
         smestaj_finansijski = {}
         for posao in svi_poslovi:
-            if len(posao.radnik_set.all()) > 0:
-                poslovi.append(posao)
-                mesecni_prihodi[posao.id] = 0
-                mesecni_rashodi[posao.id] = 0
-                radnih_sati[posao.id] = 0
-                dana_smestaja[posao.id] = 0
-                smestaj_finansijski[posao.id] = 0
-                for prihod in posao.prihodi_set.all():
-                    if prihod in prihodi:
-                        mesecni_prihodi[posao.id] += prihod.kolicina
-                for rashod in posao.rashodi_set.all():
-                    if rashod in rashodi:
-                        mesecni_rashodi[posao.id] += rashod.kolicina
-                for dan in posao.dan_set.all():
-                    if dan in Dani:
-                        radnih_sati[posao.id] += dan.radio_sati
-                        if dan.smestaj != 0.0:
-                            dana_smestaja[posao.id] += 1
-                            smestaj_finansijski[posao.id] += dan.smestaj
-                mesecno_dobit[posao.id] = mesecni_prihodi[posao.id] - mesecni_rashodi[posao.id]
+            # if len(posao.radnik_set.all()) > 0:
+            poslovi.append(posao)
+            mesecni_prihodi[posao.id] = 0
+            mesecni_rashodi[posao.id] = 0
+            radnih_sati[posao.id] = 0
+            dana_smestaja[posao.id] = 0
+            smestaj_finansijski[posao.id] = 0
+            for prihod in posao.prihodi_set.all():
+                if prihod in prihodi:
+                    mesecni_prihodi[posao.id] += prihod.kolicina
+            for rashod in posao.rashodi_set.all():
+                if rashod in rashodi:
+                    mesecni_rashodi[posao.id] += rashod.kolicina
+            for dan in posao.dan_set.all():
+                if dan in Dani:
+                    radnih_sati[posao.id] += dan.radio_sati
+                    if dan.smestaj != 0.0:
+                        dana_smestaja[posao.id] += 1
+                        smestaj_finansijski[posao.id] += dan.smestaj
+            mesecno_dobit[posao.id] = mesecni_prihodi[posao.id] - mesecni_rashodi[posao.id]
+        poslovi_temp = []
+        for posao in poslovi:
+            if mesecno_dobit[posao.id] != 0:
+                poslovi_temp.append(posao)
         ukupna_dobit = sum(mesecno_dobit.values())
         ukupni_prihodi = sum(mesecni_prihodi.values())
         ukupni_rashodi = sum(mesecni_rashodi.values())
         return render(request, 'projects/mesecni_izvod_finansije.html', {
-            'poslovi': poslovi,
+            'poslovi': poslovi_temp,
             'mesecni_prihodi': mesecni_prihodi,
             'mesecni_rashodi': mesecni_rashodi,
             'mesecno_dobit': mesecno_dobit,
