@@ -51,7 +51,7 @@
     </div>
     <hr style="height:1px;border:none;color:#333;background-color:#333;" />
     {% for radnik in radnici %}
-    <table class="table">
+    <table class="table" id="radnik{{ radnik.id }}">
         <thead>
         <tr>
             <th>Ime</th>
@@ -167,4 +167,12 @@
 
 {% endblock %}
 
+{% block jquery %}
+var pageURL = $(location).attr("href");
+var radnik_id = pageURL.split("#")[1];
+if(typeof radnik_id !== "undefined")
+{
+  $('#' + radnik_id).effect('highlight',{color: '#00e1ff'},5000); 
+} 
 
+{% endblock %}
