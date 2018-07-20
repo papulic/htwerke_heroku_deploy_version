@@ -736,9 +736,9 @@ def mesecni_izvod_poslova(request, mesec, godina):
         for posao in poslovi:
             if mesecno_dobit[posao.id] != 0:
                 poslovi_temp.append(posao)
-        ukupna_dobit = sum(mesecno_dobit.values())
-        ukupni_prihodi = sum(mesecni_prihodi.values())
-        ukupni_rashodi = sum(mesecni_rashodi.values())
+        ukupna_dobit = sum(mesecno_dobit.values()) - mesecno_dobit[4]  # sasa troskovi id je 4 i taj posao ne uracunava u konacnu dobit
+        ukupni_prihodi = sum(mesecni_prihodi.values()) - mesecni_prihodi[4]  # sasa troskovi id je 4 i taj posao ne uracunava u konacnu dobit
+        ukupni_rashodi = sum(mesecni_rashodi.values()) - mesecni_rashodi[4]  # sasa troskovi id je 4 i taj posao ne uracunava u konacnu dobit
         return render(request, 'projects/mesecni_izvod_finansije.html', {
             'poslovi': poslovi_temp,
             'mesecni_prihodi': mesecni_prihodi,
