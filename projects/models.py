@@ -1,154 +1,171 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-
 from django.db import models
-from django.contrib.auth.models import Permission, User
-from django.core.validators import RegexValidator
 
 
-class Detalji_korisnika(models.Model):
-    korisnik = models.OneToOneField(User, on_delete=models.CASCADE)
-    adresa = models.CharField(max_length=50, blank=True)
-    postanski_broj = models.CharField(max_length=5, validators=[RegexValidator(regex='^.{5}$', message='Poštanski broj mora imati 5 cifara', code='Poštanski broj mora imati 5 cifara')], blank=True)
-    grad = models.CharField(max_length=25, blank=True)
-    kontakt_telefon = models.CharField(max_length=15, blank=True)
-
-    def __unicode__(self):
-        return self.korisnik.username
-
-    class Meta:
-        verbose_name_plural = "Detalji korisnika"
-
-
-class Brend(models.Model):
-    brend = models.CharField(max_length=30)
+class Poslovi(models.Model):
+    ime = models.CharField(max_length=30)
+    opis = models.CharField(max_length=100, blank=True)
+    dogovoreni_radni_sati = models.FloatField(default=0.0)
+    dogovoreni_radni_sati_klasa_2 = models.FloatField(default=0.0)
+    dogovoreni_radni_sati_klasa_3 = models.FloatField(default=0.0)
+    dogovoreni_radni_sati_klasa_4 = models.FloatField(default=0.0)
+    dogovoreni_radni_sati_klasa_5 = models.FloatField(default=0.0)
+    dogovoreno_po_kvadratu = models.FloatField(default=0.0)
+    pocetak_radova = models.DateField()
+    kraj_radova = models.DateField(null=True, blank=True)
 
     def __unicode__(self):
-        return self.brend
+        return self.ime
 
     class Meta:
-        verbose_name_plural = "Brendovi"
+        verbose_name_plural = "Poslovi"
 
-class Tip(models.Model):
-    tip = models.CharField(max_length=30)
+
+class Zanimanja(models.Model):
+    zanimanje = models.CharField(max_length=30)
 
     def __unicode__(self):
-        return self.tip
+        return self.zanimanje
 
     class Meta:
-        verbose_name_plural = "Tipovi"
+        verbose_name_plural = "Zanimanja"
+
+klase = (
+    ('klasa_1', 'KLASA 1'),
+    ('klasa_2', 'KLASA 2'),
+    ('klasa_3', 'KLASA 3'),
+    ('klasa_4', 'KLASA 4'),
+    ('klasa_5', 'KLASA 5'),
+)
 
 
-class Kategorija(models.Model):
-    kategorija = models.CharField(max_length=30)
-    tipovi = models.BooleanField(default=False)
-    brendovi = models.BooleanField(default=False)
+class Radnik(models.Model):
+    ime = models.CharField(max_length=50)
+    oib = models.CharField(max_length=50, null=True, blank=True)
+    datum_rodjenja = models.CharField(max_length=10, null=True, blank=True)
+    prebivaliste = models.CharField(max_length=30, null=True, blank=True)
+    broj_telefona = models.CharField(max_length=30, blank=True)
+    broj_odela = models.IntegerField(default=None, null=True, blank=True)
+    broj_cipela = models.IntegerField(default=None, null=True, blank=True)
+    poceo_raditi = models.DateField(null=True, blank=True)
+    ugovor_vazi_do = models.DateField(null=True, blank=True)
+    satnica = models.FloatField(max_length=10)
+    zaduzena_oprema = models.CharField(max_length=100, blank=True)
+    dostupan = models.BooleanField(default=True)
+    posao = models.ForeignKey(Poslovi, null=True, blank=True, on_delete=models.SET_NULL)
+    u_radnom_odnosu = models.BooleanField(default=True)
+    klasa = models.CharField(max_length=10, choices=klase, default='klasa_1')
+    zanimanja = models.ManyToManyField(Zanimanja)
+    dana_do_isteka_ugovora = models.IntegerField(default=None, null=True, blank=True)
+    komentar = models.CharField(max_length=500, blank=True)
 
     def __unicode__(self):
-        return self.kategorija
+        return self.ime
 
     class Meta:
-        verbose_name_plural = "Kategorije"
+        verbose_name_plural = "Radnici"
 
 
-class Podkategorija(models.Model):
-    kategorija = models.ForeignKey(Kategorija, on_delete=models.CASCADE, related_name="podkategorije")
-    podkategorija = models.CharField(max_length=30)
+class Vozilo(models.Model):
+    marka = models.CharField(max_length=30)
+    registracija = models.CharField(max_length=30, null=True, blank=True)
+    predjeni_kilometri = models.CharField(max_length=50, null=True, blank=True)
+    registracija_istice = models.DateField()
+    sledeci_servis = models.CharField(max_length=50, null=True, blank=True)
+    potrosnja_goriva = models.FloatField(max_length=10, default=0.0)
+    opis = models.CharField(max_length=100, blank=True)
+    trenutno_duzi = models.ForeignKey(Radnik, null=True, blank=True, on_delete=models.SET_NULL)
 
     def __unicode__(self):
-        return self.kategorija.kategorija + " - " + self.podkategorija
+        return self.marka
 
     class Meta:
-        verbose_name_plural = "Podkategorije"
+        verbose_name_plural = "Vozila"
 
 
-class Artikal(models.Model):
-    kategorija = models.ForeignKey(Kategorija, on_delete=models.CASCADE, related_name='artikli')
-    podkategorija = models.ForeignKey(Podkategorija, on_delete=models.CASCADE, null=True, blank=True, related_name='artikli')
-    tip = models.ForeignKey(Tip, on_delete=models.CASCADE, null=True, blank=True, related_name='artikli')
-    brend = models.ForeignKey(Brend, on_delete=models.CASCADE, null=True, blank=True, related_name='artikli')
-    opis = models.CharField(max_length=100, default="Ovaj artikal nema opis!")
-    opis_za_filter = models.CharField(max_length=100)
-    cena = models.FloatField()
-    slika = models.ImageField(default='default.jpg')
-    na_stanju = models.BooleanField(default=True)
-    na_akciji = models.BooleanField(default=False)
-    broj_pregleda = models.IntegerField(default=0)
+class Dan(models.Model):
+    datum = models.DateField()
+    radnik = models.ForeignKey(Radnik, on_delete=models.CASCADE)
+    posao = models.ForeignKey(Poslovi, null=True, blank=True, on_delete=models.SET_NULL)
+    radio_sati = models.FloatField(max_length=10, default=0.0)
+    ishrana = models.FloatField(max_length=10, default=0.0)
+    smestaj = models.FloatField(max_length=10, default=0.0)
+    bolovanje = models.BooleanField(default=False)
+    dozvoljeno_odsustvo = models.BooleanField(default=False)
+    nedozvoljeno_odsustvo = models.BooleanField(default=False)
+    doprinos = models.FloatField(max_length=10, default=0.0)
+    doprinos_dodat = models.BooleanField(default=False)
 
     def __unicode__(self):
-        return "id: {id} - kat: {kategorija} - pod.kat: {podkategorija} - tip: {tip} - brend: {brend} - opis: {opis}".format(id=str(self.id), kategorija=self.kategorija, podkategorija=self.podkategorija, tip=self.tip, brend=self.brend, opis=self.opis)
+        return str(self.datum) + " - " + self.radnik.ime
 
     class Meta:
-        verbose_name_plural = "Artikli"
-        ordering = ['-kategorija', ]
+        verbose_name_plural = "Dani"
 
 
-class Slika(models.Model):
-    artikal = models.ForeignKey(Artikal, related_name='dodatne_slike')
-    slika = models.ImageField()
-
-
-class Korpa(models.Model):
-    user = models.ForeignKey(User, related_name='korpe')
-    datum = models.DateField(auto_now_add=True)
-    ukupno = models.FloatField(default=0.0)
-    ukupno_proizvoda_u_korpi = models.PositiveIntegerField(default=0)
-    potvrdjena = models.BooleanField(default=False)
-    otpremljena = models.BooleanField(default=False)
+class Prihodi(models.Model):
+    datum = models.DateField()
+    vrsta = models.CharField(max_length=150)
+    kolicina = models.FloatField(max_length=10, default=0.0)
+    posao = models.ForeignKey(Poslovi, on_delete=models.CASCADE)
 
     def __unicode__(self):
-        return self.user.username + " - id: " + str(self.user.id)
-
-    def ime(self):
-        return self.user.first_name + " " + self.user.last_name
-
-    def mail(self):
-        return self.user.email
-
-    def tel(self):
-        return self.user.detalji_korisnika.kontakt_telefon
-
-    def adresa(self):
-        return self.user.detalji_korisnika.adresa + "\n" + self.user.detalji_korisnika.postanski_broj + "\n" + self.user.detalji_korisnika.grad
+        return self.vrsta
 
     class Meta:
-        verbose_name_plural = "Korpe kupaca"
-        ordering = ['-datum', ]
+        verbose_name_plural = "Prihodi"
 
 
-class Entry(models.Model):
-    artikal = models.ForeignKey(Artikal, on_delete=models.CASCADE)
-    korpa = models.ForeignKey(Korpa, on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField(default=1)
-    ukupno = models.FloatField(default=0.0)
+class Rashodi(models.Model):
+    datum = models.DateField()
+    vrsta = models.CharField(max_length=150)
+    kolicina = models.FloatField(max_length=10, default=0.0)
+    posao = models.ForeignKey(Poslovi, on_delete=models.CASCADE)
+    vozilo = models.ForeignKey(Vozilo, null=True, blank=True, on_delete=models.SET_NULL)
 
     def __unicode__(self):
-        return self.artikal.opis + str(self.quantity)
+        return self.vrsta
 
     class Meta:
-        verbose_name_plural = "Unosi u korpe"
+        verbose_name_plural = "Rashodi"
 
 
-class Poruke(models.Model):
-    user = models.ForeignKey(User, related_name='poruke')
-    tema = models.CharField(max_length=250, null=True, blank=True)
-    poruka = models.TextField(null=True, blank=True)
-    datum = models.DateField(auto_now_add=True)
-    procitana = models.BooleanField(default=False)
+class Akontacije(models.Model):
+    godina = models.IntegerField()
+    mesec = models.IntegerField()
+    kolicina = models.FloatField(default=0.0)
+    radnik = models.ForeignKey(Radnik)
 
     def __unicode__(self):
-        return self.user.username
+        return self.radnik.ime
 
     class Meta:
-        verbose_name_plural = "Poruke"
-        ordering = ['-datum', ]
+        verbose_name_plural = "Akontacije"
 
-
-class Pretraga(models.Model):
-    pretraga = models.CharField(max_length=50)
+class RucnoLD(models.Model):
+    godina = models.IntegerField()
+    mesec = models.IntegerField()
+    kolicina = models.FloatField(default=0.0)
+    radnik = models.ForeignKey(Radnik)
+    komentar = models.CharField(max_length=150, null=True, blank=True)
 
     def __unicode__(self):
-        return self.pretraga
+        return self.radnik.ime
 
     class Meta:
-        verbose_name_plural = "Pretrage"
+        verbose_name_plural = "Akontacije"
+
+class Komentar(models.Model):
+    datum = models.DateField(null=True, blank=True)
+    komentar = models.TextField()
+    posao = models.ForeignKey(Poslovi, on_delete=models.CASCADE)
+
+    def __unicode__(self):
+        return str(self.posao)
+
+    class Meta:
+        verbose_name_plural = "Komentari"
+
+class Doprinos(models.Model):
+    iznos = models.FloatField()
