@@ -168,15 +168,19 @@
 {% endblock %}
 
 {% block jquery %}
+function scrollToDiv(element){
+    element = element.replace("link", "");
+    $('html,body').unbind().animate({scrollTop: $(element).offset().top-70},'fast');
+};
 var pageURL = $(location).attr("href");
 var radnik_id = pageURL.split("#")[1];
 if(typeof radnik_id !== "undefined")
 {
   $('#' + radnik_id).effect('highlight',{color: '#ffaa02'},15000);
-  $('#' + radnik_id).closest('table').effect('highlight',{color: '#00e1ff'},5000);
+  $('#' + radnik_id).parents('table').effect('highlight',{color: '#00e1ff'},5000);
   var x = $('#' + radnik_id).position();
-  window.scrollTo(x.left, x.top);
-  //console.log(x.left, x.top - 50);
+  scrollToDiv('#' + radnik_id);
+  window.scrollTo(x.left - 70, x.top);
 
 } 
 
