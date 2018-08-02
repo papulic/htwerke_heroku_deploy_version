@@ -124,7 +124,7 @@
                 {% else %}
                 <td>
                 {% endif %}
-                    <a href="{% url 'projects:dan-update' dan.id posao_id %}">
+                    <a id="dan{{ dan.id }}" href="{% url 'projects:dan-update' dan.id posao_id %}">
                         <font color="black" {% if dan.datum.weekday == 6 %}style="color:red"{% endif %}><strong>
                         {{ dan.radio_sati }}
                         </strong></font>
@@ -172,7 +172,12 @@ var pageURL = $(location).attr("href");
 var radnik_id = pageURL.split("#")[1];
 if(typeof radnik_id !== "undefined")
 {
-  $('#' + radnik_id).effect('highlight',{color: '#00e1ff'},5000); 
+  $('#' + radnik_id).effect('highlight',{color: '#ffaa02'},15000);
+  $('#' + radnik_id).closest('table').effect('highlight',{color: '#00e1ff'},5000);
+  var x = $('#' + radnik_id).position();
+  window.scrollTo(x.left, x.top);
+  //console.log(x.left, x.top - 50);
+
 } 
 
 {% endblock %}
