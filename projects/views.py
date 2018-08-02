@@ -1182,7 +1182,7 @@ def dan_update(request, dan_id, posao_id):
         return HttpResponseRedirect(reverse('projects:monthview-workers', kwargs={'posao_id': posao_id,
                                                                                   'mesec': int(dan.datum.month),
                                                                                   'godina': int(dan.datum.year)
-                                                                                  }) + '#radnik{radnik_id}'.format(radnik_id=dan.radnik.id))
+                                                                                  }) + '#dan{dan_id}'.format(dan_id=dan_id))
     context = {
         "form": form,
         'dan_id': dan_id,
