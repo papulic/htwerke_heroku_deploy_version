@@ -870,8 +870,24 @@ def detail(request, project_id):
         else:
             preostalo_dana = 100
         # get only prihodi and rashodi for current project
-        prihodi = Prihodi.objects.filter(posao=project)
-        rashodi = Rashodi.objects.filter(posao=project)
+        if request.method == 'GET':
+            if 'izbor_meseca_finansije' in request.GET:
+                meseci = ['Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun', 'Jul',
+                          'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar']
+                mesec = request.GET['mesec']
+                godina = request.GET['godina']
+                if mesec in meseci:
+                    mesec = meseci.index(mesec) + 1
+                try:
+                    prihodi = Prihodi.objects.filter(posao=project, datum__year=godina, datum__month=mesec).order_by('datum', 'vrsta')
+                    rashodi = Rashodi.objects.filter(posao=project, datum__year=godina, datum__month=mesec).order_by('datum', 'vrsta')
+                except ValueError:
+                    prihodi = Prihodi.objects.filter(posao=project).order_by('datum', 'vrsta')
+                    rashodi = Rashodi.objects.filter(posao=project).order_by('datum', 'vrsta')
+                    message = "Pogrešan izbor datuma, prikazani su svi prihodi i rashodi!"
+        else:
+            prihodi = Prihodi.objects.filter(posao=project).order_by('datum', 'vrsta')
+            rashodi = Rashodi.objects.filter(posao=project).order_by('datum', 'vrsta')
         # calculate rashodi and prihodi in total
         ukupni_rashodi = 0.0
         ukupni_prihodi = 0.0
