@@ -885,6 +885,9 @@ def detail(request, project_id):
                     prihodi = Prihodi.objects.filter(posao=project).order_by('datum', 'vrsta')
                     rashodi = Rashodi.objects.filter(posao=project).order_by('datum', 'vrsta')
                     message = "Pogrešan izbor datuma, prikazani su svi prihodi i rashodi!"
+            else:
+                prihodi = Prihodi.objects.filter(posao=project).order_by('datum', 'vrsta')
+                rashodi = Rashodi.objects.filter(posao=project).order_by('datum', 'vrsta')
         else:
             prihodi = Prihodi.objects.filter(posao=project).order_by('datum', 'vrsta')
             rashodi = Rashodi.objects.filter(posao=project).order_by('datum', 'vrsta')
