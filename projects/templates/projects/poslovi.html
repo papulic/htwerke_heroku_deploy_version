@@ -77,83 +77,118 @@
                 <h4>Svi do sada uneti dani smestaja za sve radnike koji su na projektu: {{ dana_smestaja_svih_radnika }}</h4>
             </div>
          </div>
-         <h3>Finansije</h3>
-         <div class="table-div">
-             <table class="table">
-                <thead>
-                <tr>
-                    <th><font color="red">Rashodi</font></th>
-                    <th>Vozilo</th>
-                    <th>Datum</th>
-                    <th>Količina</th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for rashod in rashodi %}
-                <tr class="danger">
-                    <td>{{ rashod.vrsta }}</td>
-                    {% if rashod.vozilo %}
-                    <td>{{ rashod.vozilo }}</td>
-                    {% else %}
-                    <td>---</td>
-                    {% endif %}
-                    <td>{{ rashod.datum }}</td>
-                    <td>{{ rashod.kolicina }}</td>
-                    <td>
-                        <a href="{% url 'projects:rashod-delete' project_id rashod.id %}">
-                            <button type="button" class="btn btn-danger" onclick="clicked(event)" style="float: right">
-                                <span class="glyphicon glyphicon-trash"></span>
-                            </button>
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-                <tr>
-                    <td><strong>Ukupni rashodi:</strong></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td><strong>{{ ukupni_rashodi }}</strong></td>
-                </tr>
-                </tbody>
-             </table>
+         <div id="finansije">
+             <form id="mesecne_finansije" method="GET">
+                <table>
+                    <tr>
+                        <td>
+                            <input list="mesec" placeholder="  Izaberi mesec" name="mesec">
+
+                              <datalist id="mesec">
+                                <option value="Januar">
+                                <option value="Februar">
+                                <option value="Mart">
+                                <option value="April">
+                                <option value="Maj">
+                                <option value="Jun">
+                                <option value="Jul">
+                                <option value="Avgust">
+                                <option value="Septembar">
+                                <option value="Oktobar">
+                                <option value="Novembar">
+                                <option value="Decembar">
+                              </datalist>
+                        </td>
+                        <td>&nbsp;</td>
+                        <td>
+                            <input name="godina" placeholder=" Upiši godinu" type="text">
+                        </td>
+                        <td>&nbsp;</td>
+                        <td>
+                            <button name="izbor_meseca_finansije" class="btn btn-primary pull-right">Izaberi</button>
+                        </td>
+                   </tr>
+                </table>
+
+             </form>
+             <h3>Finansije</h3>
+             <div class="table-div">
+                 <table class="table">
+                    <thead>
+                    <tr>
+                        <th><font color="red">Rashodi</font></th>
+                        <th>Vozilo</th>
+                        <th>Datum</th>
+                        <th>Količina</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for rashod in rashodi %}
+                    <tr class="danger">
+                        <td>{{ rashod.vrsta }}</td>
+                        {% if rashod.vozilo %}
+                        <td>{{ rashod.vozilo }}</td>
+                        {% else %}
+                        <td>---</td>
+                        {% endif %}
+                        <td>{{ rashod.datum }}</td>
+                        <td>{{ rashod.kolicina }}</td>
+                        <td>
+                            <a href="{% url 'projects:rashod-delete' project_id rashod.id %}">
+                                <button type="button" class="btn btn-danger" onclick="clicked(event)" style="float: right">
+                                    <span class="glyphicon glyphicon-trash"></span>
+                                </button>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <td><strong>Ukupni rashodi:</strong></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td><strong>{{ ukupni_rashodi }}</strong></td>
+                    </tr>
+                    </tbody>
+                 </table>
+             </div>
+             <div class="table-div bottom-border">
+                 <table class="table">
+                    <thead>
+                    <tr>
+                        <th><font color="green">Prihodi</font></th>
+                        <th>Datum</th>
+                        <th>Količina</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for prihod in prihodi %}
+                    <tr class="success">
+                        <td>{{ prihod.vrsta }}</td>
+                        <td>{{ prihod.datum }}</td>
+                        <td>{{ prihod.kolicina }}</td>
+                        <td>
+                            <a href="{% url 'projects:prihod-delete' project_id prihod.id %}">
+                                <button type="button" class="btn btn-danger" onclick="clicked(event)" style="float: right">
+                                    <span class="glyphicon glyphicon-trash"></span>
+                                </button>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <td><strong>Ukupni prihodi:</strong></td>
+                        <td></td>
+                        <td></td>
+                        <td><strong>{{ ukupni_prihodi }}</strong></td>
+                    </tr>
+                    </tbody>
+                 </table>
+             </div>
+             <h4><strong>Dobit: <span style="float: right">{{ dobit }}</span></strong></h4><br>
          </div>
-         <div class="table-div bottom-border">
-             <table class="table">
-                <thead>
-                <tr>
-                    <th><font color="green">Prihodi</font></th>
-                    <th>Datum</th>
-                    <th>Količina</th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for prihod in prihodi %}
-                <tr class="success">
-                    <td>{{ prihod.vrsta }}</td>
-                    <td>{{ prihod.datum }}</td>
-                    <td>{{ prihod.kolicina }}</td>
-                    <td>
-                        <a href="{% url 'projects:prihod-delete' project_id prihod.id %}">
-                            <button type="button" class="btn btn-danger" onclick="clicked(event)" style="float: right">
-                                <span class="glyphicon glyphicon-trash"></span>
-                            </button>
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-                <tr>
-                    <td><strong>Ukupni prihodi:</strong></td>
-                    <td></td>
-                    <td></td>
-                    <td><strong>{{ ukupni_prihodi }}</strong></td>
-                </tr>
-                </tbody>
-             </table>
-         </div>
-         <h4><strong>Dobit: <span style="float: right">{{ dobit }}</span></strong></h4><br>
          <h3>Radnici na projektu</h3>
          <form role="form" action="" method="post" enctype="multipart/form-data">
              {% csrf_token %}
