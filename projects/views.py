@@ -879,18 +879,18 @@ def detail(request, project_id):
                 if mesec in meseci:
                     mesec = meseci.index(mesec) + 1
                 try:
-                    prihodi = Prihodi.objects.filter(posao=project, datum__year=godina, datum__month=mesec).order_by('datum', 'vrsta')
-                    rashodi = Rashodi.objects.filter(posao=project, datum__year=godina, datum__month=mesec).order_by('datum', 'vrsta')
+                    prihodi = Prihodi.objects.filter(posao=project, datum__year=godina, datum__month=mesec).order_by('vrsta')
+                    rashodi = Rashodi.objects.filter(posao=project, datum__year=godina, datum__month=mesec).order_by('vrsta')
                 except ValueError:
-                    prihodi = Prihodi.objects.filter(posao=project).order_by('datum', 'vrsta')
-                    rashodi = Rashodi.objects.filter(posao=project).order_by('datum', 'vrsta')
+                    prihodi = Prihodi.objects.filter(posao=project).order_by('vrsta')
+                    rashodi = Rashodi.objects.filter(posao=project).order_by('vrsta')
                     message = "Pogrešan izbor datuma, prikazani su svi prihodi i rashodi!"
             else:
-                prihodi = Prihodi.objects.filter(posao=project).order_by('datum', 'vrsta')
-                rashodi = Rashodi.objects.filter(posao=project).order_by('datum', 'vrsta')
+                prihodi = Prihodi.objects.filter(posao=project).order_by('vrsta')
+                rashodi = Rashodi.objects.filter(posao=project).order_by('vrsta')
         else:
-            prihodi = Prihodi.objects.filter(posao=project).order_by('datum', 'vrsta')
-            rashodi = Rashodi.objects.filter(posao=project).order_by('datum', 'vrsta')
+            prihodi = Prihodi.objects.filter(posao=project).order_by('vrsta')
+            rashodi = Rashodi.objects.filter(posao=project).order_by('vrsta')
         # calculate rashodi and prihodi in total
         ukupni_rashodi = 0.0
         ukupni_prihodi = 0.0
