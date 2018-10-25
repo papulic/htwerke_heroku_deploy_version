@@ -92,7 +92,7 @@ class DatumForm(forms.Form):
     posao = forms.ModelChoiceField(queryset=Poslovi.objects.all(), required=False)
 
 class Datum_finansForm(forms.Form):
-    mesec = forms.IntegerField(max_value=12, min_value=1)
+    mesec = forms.IntegerField(max_value=12, min_value=1, required=False)
     godina = forms.IntegerField(label="godina")
 
 class DanForm(forms.ModelForm):
