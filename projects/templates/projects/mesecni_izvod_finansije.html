@@ -4,10 +4,12 @@
 {% load staticfiles %}
 
 <div class="container">
-    {% if mesec == '0' %}
+    {% if od_meseca == '0' %}
     <h3>Finansije za {{ godina }} godinu</h3>
+    {% elif od_meseca == do_meseca %}
+    <h3>Finansije za {{ od_meseca }}.{{ godina }}</h3>
     {% else %}
-    <h3>Finansije za {{ mesec }}.{{ godina }}</h3>
+    <h3>Finansije od {{ od_meseca }} do {{ do_meseca }} {{ godina }}</h3>
     {% endif %}
     {% if messages %}
     <ul class="messages">
@@ -77,13 +79,15 @@
                     <td>{{ v }}</td>
                     {% endif %}
                     {% endfor %}
+                    {% if od_meseca == do_meseca and od_meseca != '0' %}
                     <td>
-                            <a href="{% url 'projects:pdf_posao_mesecni' posao.id mesec godina %}">
+                            <a href="{% url 'projects:pdf_posao_mesecni' posao.id od_meseca godina %}">
                                 <button type="button" class="btn btn-info">
-                                    <span class="glyphicon glyphicon-pencil"></span>&nbsp; Napravi pdf izveštaj za {{ mesec }}.{{ godina }}
+                                    <span class="glyphicon glyphicon-pencil"></span>&nbsp; Napravi pdf izveštaj za {{ od_meseca }}.{{ godina }}
                                 </button>
                             </a>
                         </td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
                 <tr>
