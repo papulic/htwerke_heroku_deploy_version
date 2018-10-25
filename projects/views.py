@@ -578,13 +578,19 @@ def biranje_meseca_za_finansije(request):
         if request.method == 'POST':
             if form.is_valid():
                 data = form.cleaned_data
-                mesec = data['mesec']
+                od_meseca = data['od_meseca']
+                do_meseca = data['do_meseca']
                 godina = data['godina']
-                if mesec == None:
-                    mesec = 0
-                return HttpResponseRedirect(reverse('projects:monthview-projects', kwargs={'mesec': int(mesec),
-                                                                                           'godina': int(godina)
-                                                                                           }))
+                if od_meseca == None or do_meseca == None:
+                    od_meseca = 0
+                    do_meseca = 0
+                if od_meseca <= do_meseca:
+                    return HttpResponseRedirect(reverse('projects:monthview-projects', kwargs={'od_meseca': int(od_meseca),
+                                                                                               'do_meseca': int(do_meseca),
+                                                                                               'godina': int(godina)
+                                                                                               }))
+                else:
+                    messages.success(request, 'Nepravilan unos parametara!')
     return render(request, 'projects/biranje_meseca.html', {
             'form': form
         })
@@ -695,18 +701,25 @@ def mesecni_izvod_radnika(request, mesec, godina, posao_id):
         })
 
 
-def mesecni_izvod_poslova(request, mesec, godina):
+def mesecni_izvod_poslova(request, od_meseca, do_meseca, godina):
     if not request.user.is_authenticated():
         return render(request, 'projects/login.html')
     else:
         svi_poslovi = Poslovi.objects.all()
-        if mesec != '0':
-            prihodi = Prihodi.objects.filter(datum__year=godina,
-                                             datum__month=mesec)
-            rashodi = Rashodi.objects.filter(datum__year=godina,
-                                             datum__month=mesec)
-            Dani = Dan.objects.filter(datum__year=godina,
-                                      datum__month=mesec)
+        if od_meseca != '0':
+            prihodi = []
+            rashodi = []
+            Dani = []
+            for i in range(int(od_meseca), int(do_meseca) + 1):
+                prihodi_temp = Prihodi.objects.filter(datum__year=godina,
+                                                      datum__month=i)
+                rashodi_temp = Rashodi.objects.filter(datum__year=godina,
+                                                      datum__month=i)
+                Dani_temp = Dan.objects.filter(datum__year=godina,
+                                               datum__month=i)
+                prihodi += prihodi_temp
+                rashodi += rashodi_temp
+                Dani += Dani_temp
         else:
             prihodi = Prihodi.objects.filter(datum__year=godina)
             rashodi = Rashodi.objects.filter(datum__year=godina)
@@ -751,7 +764,8 @@ def mesecni_izvod_poslova(request, mesec, godina):
             'mesecni_prihodi': mesecni_prihodi,
             'mesecni_rashodi': mesecni_rashodi,
             'mesecno_dobit': mesecno_dobit,
-            'mesec': mesec,
+            'od_meseca': od_meseca,
+            'do_meseca': do_meseca,
             'godina': godina,
             'ukupna_dobit': ukupna_dobit,
             'ukupni_prihodi': ukupni_prihodi,
