@@ -4,7 +4,11 @@
 {% load staticfiles %}
 
 <div class="container">
+    {% if mesec == '0' %}
+    <h3>Finansije za {{ godina }} godinu</h3>
+    {% else %}
     <h3>Finansije za {{ mesec }}.{{ godina }}</h3>
+    {% endif %}
     {% if messages %}
     <ul class="messages">
     {% for message in messages %}
