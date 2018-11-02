@@ -28,6 +28,11 @@
                 <span class="glyphicon glyphicon-pencil"></span>&nbsp; Promeni detalje o vozilu
             </button>
         </a>
+        <a href="{% url 'projects:komentar_vozilo-add' vozilo.id %}">
+            <button type="button" class="btn btn-light">
+                <span class="glyphicon glyphicon-pencil"></span>&nbsp; Dodaj komentar
+            </button>
+        </a>
     </div>
     <div class="row">
         <div class="col-xs-12">
@@ -79,5 +84,38 @@
          </table>
     </div>
     <h3>Ukupni troškovi: {{ ukupni_troskovi }}</h3>
+    <div class="table-div bottom-border">
+             <table class="table">
+                <thead>
+                <tr>
+                    <th>Komentari</th>
+                    <th>Datum</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for komentar in vozilo.komentar_za_vozilo_set.all %}
+                <tr>
+                    <td class="skraceni_tekst"><a href="{% url 'projects:komentar_za_vozilo-detail' komentar.id %}">{{ komentar.komentar_vozilo }}</a></td>
+                    <td>{{ komentar.datum }}</td>
+                    <td>{{ prihod.kolicina }}</td>
+                    <td>
+                        <a href="{% url 'projects:komentar_za_vozilo-delete' vozilo.id komentar.id %}">
+                            <button type="button" class="btn btn-danger" onclick="clicked(event)">
+                                <span class="glyphicon glyphicon-trash"></span>
+                            </button>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+             </table>
+         </div>
 </div>
+<script>
+function clicked(e)
+{
+    if(!confirm('Sigurno želite obrisati?'))e.preventDefault();
+}
+</script>
 {% endblock %}
