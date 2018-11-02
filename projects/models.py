@@ -167,5 +167,16 @@ class Komentar(models.Model):
     class Meta:
         verbose_name_plural = "Komentari"
 
+class Komentar_za_vozilo(models.Model):
+    datum = models.DateField(null=True, blank=True)
+    komentar_vozilo = models.TextField()
+    vozilo = models.ForeignKey(Vozilo, on_delete=models.CASCADE)
+
+    def __unicode__(self):
+        return str(self.vozilo)
+
+    class Meta:
+        verbose_name_plural = "Komentari_za_vozila"
+
 class Doprinos(models.Model):
     iznos = models.FloatField()

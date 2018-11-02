@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import Poslovi, Vozilo, Radnik, Prihodi, Rashodi, Dan, Zanimanja, Akontacije, Komentar, RucnoLD
+from .models import Poslovi, Vozilo, Radnik, Prihodi, Rashodi, Dan, Zanimanja, Akontacije, Komentar, RucnoLD, Komentar_za_vozilo
 
 class DateInput(forms.DateInput):
     input_type = 'date'
@@ -114,6 +114,15 @@ class KomentarForm(forms.ModelForm):
     class Meta:
         model = Komentar
         fields = ['datum', 'komentar']
+
+class Komentar_za_voziloForm(forms.ModelForm):
+    datum = forms.DateField(
+        widget=forms.DateInput(format='%d.%m.%Y', attrs={'class': "datum"}),
+        input_formats=('%d.%m.%Y', '%d/%m/%Y', '%d.%m.%y', '%d/%m/%y'),
+        required=False)
+    class Meta:
+        model = Komentar_za_vozilo
+        fields = ['datum', 'komentar_vozilo']
 
 class RucnoLDForm(forms.ModelForm):
     class Meta:

@@ -4,11 +4,11 @@ from __future__ import unicode_literals
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import logout
-from .forms import UserForm, PosloviForm, RadnikForm, PrihodiForm, RashodiForm, DatumForm, DanForm, ZanimanjeForm, VoziloForm, AkontacijeForm, Datum_finansForm, KvadratForm, KomentarForm, RucnoLDForm
+from .forms import UserForm, PosloviForm, RadnikForm, PrihodiForm, RashodiForm, DatumForm, DanForm, ZanimanjeForm, VoziloForm, AkontacijeForm, Datum_finansForm, KvadratForm, KomentarForm, RucnoLDForm, Komentar_za_voziloForm
 from django.http import HttpResponseRedirect, HttpResponse
 from django.urls import reverse
 from django.contrib import messages
-from .models import Poslovi, Vozilo, Radnik, Prihodi, Rashodi, Zanimanja, Dan, Akontacije, Komentar, RucnoLD, Doprinos
+from .models import Poslovi, Vozilo, Radnik, Prihodi, Rashodi, Zanimanja, Dan, Akontacije, Komentar, RucnoLD, Doprinos, Komentar_za_vozilo
 from .filters import RadnikFilter, ZanimanjeFilter
 import datetime
 import calendar
@@ -1366,6 +1366,23 @@ def create_komentar(request, project_id):
         }
         return render(request, 'projects/create_komentar.html', context)
 
+def create_vozilo_komentar(request, vozilo_id):
+    if not request.user.is_authenticated():
+        return render(request, 'projects/login.html')
+    else:
+        instance = Vozilo.objects.get(pk=vozilo_id)
+        form = Komentar_za_voziloForm(request.POST or None)
+        if request.method == 'POST':
+            if form.is_valid():
+                komentar = form.save(commit=False)
+                komentar.vozilo = instance
+                komentar.save()
+                return HttpResponseRedirect(reverse('projects:vozilo-detail', kwargs={'vozilo_id': int(vozilo_id)}))
+        context = {
+            "form": form,
+        }
+        return render(request, 'projects/create_komentar.html', context)
+
 
 def komentar_detail(request, komentar_id):
     if not request.user.is_authenticated():
@@ -1373,6 +1390,15 @@ def komentar_detail(request, komentar_id):
     else:
         komentar = get_object_or_404(Komentar, pk=komentar_id)
         return render(request, 'projects/komentar_detalji.html', {
+            'komentar': komentar
+        })
+
+def komentar_vozilo_detail(request, komentar_id):
+    if not request.user.is_authenticated():
+        return render(request, 'projects/login.html')
+    else:
+        komentar = get_object_or_404(Komentar_za_vozilo, pk=komentar_id)
+        return render(request, 'projects/komentar_vozilo_detalji.html', {
             'komentar': komentar
         })
 
@@ -1391,11 +1417,30 @@ def komentar_update(request, komentar_id):
     }
     return render(request, 'projects/komentar_update.html', context)
 
+def komentar_vozilo_update(request, komentar_id):
+    instance = Komentar_za_vozilo.objects.get(pk=komentar_id)
+    form = Komentar_za_voziloForm(request.POST or None, instance=instance)
+    if form.is_valid():
+        komentar = form.save(commit=False)
+        komentar.save()
+        messages.success(request, "Komentar je izmenjen!")
+        return HttpResponseRedirect(reverse('projects:komentar_za_vozilo-detail', kwargs={'komentar_id': int(komentar_id)}))
+    context = {
+        "form": form,
+        'komentar': komentar_id,
+    }
+    return render(request, 'projects/komentar_update.html', context)
+
 
 def komentar_delete(request, project_id, komentar_id):
     komentar = Komentar.objects.get(pk=komentar_id)
     komentar.delete()
     return HttpResponseRedirect(reverse('projects:posao', kwargs={'project_id': int(project_id)}))
+
+def komentar_vozilo_delete(request, vozilo_id, komentar_id):
+    komentar = Komentar_za_vozilo.objects.get(pk=komentar_id)
+    komentar.delete()
+    return HttpResponseRedirect(reverse('projects:vozilo-detail', kwargs={'vozilo_id': int(vozilo_id)}))
 
 
 def create_kvadrat(request, project_id):
