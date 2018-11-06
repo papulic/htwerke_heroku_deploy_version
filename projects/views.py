@@ -902,6 +902,13 @@ def detail(request, project_id):
                 try:
                     prihodi = Prihodi.objects.filter(posao=project, datum__year=godina, datum__month=mesec).order_by('vrsta')
                     rashodi = Rashodi.objects.filter(posao=project, datum__year=godina, datum__month=mesec).order_by('vrsta')
+                    Dani = Dan.objects.filter(posao=project, datum__year=godina, datum__month=mesec)
+                    radni_sati_svih_radnika = 0.0
+                    dana_smestaja_svih_radnika = 0
+                    for dan in Dani:
+                        radni_sati_svih_radnika += dan.radio_sati
+                        if dan.smestaj != 0.0:
+                            dana_smestaja_svih_radnika += 1
                 except ValueError:
                     prihodi = Prihodi.objects.filter(posao=project).order_by('vrsta')
                     rashodi = Rashodi.objects.filter(posao=project).order_by('vrsta')
@@ -1151,7 +1158,6 @@ def dan_update(request, dan_id, posao_id):
                         rashod_ishrana.vrsta = "ISHRANA_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year)
                     if old_ishrana != 0.0:
                         rashod_ishrana.kolicina -= old_ishrana
-                        rashod_ishrana.kolicina += dan.ishrana
                     rashod_ishrana.save()
                 ###############################################################
                 if dan.smestaj != 0.0:
@@ -1169,7 +1175,6 @@ def dan_update(request, dan_id, posao_id):
                         rashod_smestaj.vrsta = "SMESTAJ_RADNIKA_{id}_{p}_{m}_{g}".format(p=dan.posao.ime, id=dan.posao.id, m=dan.datum.month, g=dan.datum.year)
                     if old_smestaj != 0.0:
                         rashod_smestaj.kolicina -= old_smestaj
-                        rashod_smestaj.kolicina += dan.smestaj
                     rashod_smestaj.save()
                 ###############################################################
                 if dan.posao.dogovoreni_radni_sati != 0.0:
