@@ -283,13 +283,14 @@ def pdf_posao_mesecni_presek(request, posao_id, mesec, godina):
 
 
 def pdf_radnik(request, radnik_id):
-    meseci = {'1':'Januar', '2':'Februar', '3':'Mart', '4':'April', '5':'Maj', '6':'Jun', '7':'Jul', '8':'Avgust', '9':'Septembar',
+    meseci_u_godini = {'1':'Januar', '2':'Februar', '3':'Mart', '4':'April', '5':'Maj', '6':'Jun', '7':'Jul', '8':'Avgust', '9':'Septembar',
               '10':'Oktobar', '11':'Novembar', '12':'Decembar'}
     radnik = Radnik.objects.get(id=radnik_id)
     current_date = datetime.date.today()
     preostalo_dana = radnik.ugovor_vazi_do - current_date
     radnik.dana_do_isteka_ugovora = preostalo_dana.days
     svi_dani_radnika = Dan.objects.filter(radnik=radnik).order_by('datum')
+    doprinos = Doprinos.objects.get(pk=1).iznos
     godine = []
     for dan in svi_dani_radnika:
         godina_postoji = False
@@ -312,11 +313,21 @@ def pdf_radnik(request, radnik_id):
                                              'bolovanja': 0,
                                              'odmora': 0,
                                              'nedozvoljenog_odsustva': 0,
-                                             'radnih_sati': 0.0}])
+                                             'radnih_sati': 0.0,
+                                             'doprinosi': 0.0,
+                                             'smestaj': 0.0,
+                                             'ishrana': 0.0,
+                                             'netoLD': 0.0,
+                                             'ishrana_nedelja': 0.0}])
         for mesec in meseci:
             if mesec[0] == dan.datum.month:
                 dani = mesec[1]
+                dana_u_mesecu = calendar.monthrange(dan.datum.year, dan.datum.month)[1]
+                doprinos_za_dan = round(float(doprinos) / float(dana_u_mesecu), 2)
+        dani['doprinosi'] += doprinos_za_dan
         if not dan.datum.weekday() == 6:
+            dani['smestaj'] += dan.smestaj
+            dani['ishrana'] += dan.ishrana
             if dan.bolovanje:
                 dani['bolovanja'] += 1
             elif dan.dozvoljeno_odsustvo:
@@ -327,6 +338,10 @@ def pdf_radnik(request, radnik_id):
                 if dan.radio_sati != 0:
                     dani['radnih_dana'] += 1
                     dani['radnih_sati'] += dan.radio_sati
+        else:
+            dani['ishrana_nedelja'] += dan.ishrana
+        if dan.datum.day == dana_u_mesecu:
+            dani['netoLD'] = dani['radnih_sati'] * radnik.satnica + dani['ishrana_nedelja']
 
 
     strana = 1
@@ -336,56 +351,29 @@ def pdf_radnik(request, radnik_id):
     response['Content-Disposition'] = 'attachment; filename="{radnik}.pdf"'.format(radnik=radnik.ime)
 
     # Create the PDF object, using the response object as its "file."
-    p = canvas.Canvas(response)
-    # pagesize=(595.27,841.89)
-    # Draw things on the PDF. Here's where the PDF generation happens.
-    # See the ReportLab documentation for the full list of functionality.
-    prvi_red = "{radnik} - {oib}".format(radnik=radnik.ime, oib=radnik.oib)
-    drugi_red = "Pocetak radnog odnosa: {pocetak}, Ugovor istice: {istice}".format(pocetak=radnik.poceo_raditi.strftime('%d.%m.%Y'), istice=radnik.ugovor_vazi_do.strftime('%d.%m.%Y'))
-    p.drawString(50, 820, prvi_red)
-    # p.setStrokeColorRGB(0, 1, 0.3)  # choose your line color
-    p.line(45, 815, 570, 815)
-    p.setFontSize(10)
-    p.drawString(50, 800, drugi_red)
-    p.line(60, 795, 500, 795)
-    y = 765
+    doc = SimpleDocTemplate(response)
+    # container for the 'Flowable' objects
+    elements = []
+    header = [[radnik.ime, radnik.oib, 'Pocetak radnog odnosa', radnik.poceo_raditi.strftime('%d.%m.%Y'), 'Ugovor istice', radnik.ugovor_vazi_do.strftime('%d.%m.%Y')]]
+    # data.append(["Pocetak radnog odnosa: {pocetak}, Ugovor istice: {istice}".format(pocetak=radnik.poceo_raditi.strftime('%d.%m.%Y'), istice=radnik.ugovor_vazi_do.strftime('%d.%m.%Y'))])
+    data = [['G-M', 'Radnih dana', 'Bolovanja', 'Odmora', 'Nedozvoljenog\nodsustva', 'Radnih sati', 'doprinosi', 'smestaj', 'ishrana', 'Neto LD']]
     for godina in godine:
-        p.drawString(60, 780, "{godina}".format(godina=godina[0]))
-        y -= 10
-        p.setFontSize(7)
-
+        data.append([])
+        data.append([str(godina[0])])
+        data.append([])
         for mesec in godina[1]:
-            string = "Mesec: {mesec}".format(mesec=mesec[0])
-            p.drawString(60, y, string)
-            y -= 10
-            for key, value in mesec[1].iteritems():
-                if key == "radnih_dana":
-                    p.drawString(60, y, "Radnih dana: {value}".format(value=value))
-            for key, value in mesec[1].iteritems():
-                if key == "bolovanja":
-                    p.drawString(160, y, "Bolovanja: {value}".format(value=value))
-            for key, value in mesec[1].iteritems():
-                if key == "odmora":
-                    p.drawString(260, y, "Odmora: {value}".format(value=value))
-            for key, value in mesec[1].iteritems():
-                if key == "nedozvoljenog_odsustva":
-                    p.drawString(360, y, "Nedozvoljenog odsustva: {value}".format(value=value))
-            for key, value in mesec[1].iteritems():
-                if key == "radnih_sati":
-                    p.drawString(460, y, "Radnih sati: {value}".format(value=value))
-            y -= 20
-            if y < 100:
-                y = 800
-                stra = "- {strana} -".format(strana=strana)
-                p.drawString(290, 20, stra)
-                p.showPage()
-                strana += 1
-                p.setFontSize(7)
-    # Close the PDF object cleanly, and we're done.
-    stra = "- {strana} -".format(strana=strana)
-    p.drawString(290, 20, stra)
-    p.showPage()
-    p.save()
+            data.append([meseci_u_godini[str(mesec[0])], mesec[1]['radnih_dana'], mesec[1]['bolovanja'], mesec[1]['odmora'], mesec[1]['nedozvoljenog_odsustva'], mesec[1]['radnih_sati'], mesec[1]['doprinosi'], mesec[1]['smestaj'], mesec[1]['ishrana'], mesec[1]['netoLD']])
+
+    t1 = Table(header)
+    t = Table(data)
+    t.setStyle(TableStyle([('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
+                           ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black),
+                           ('BOX', (0, 0), (-1, -1), 0.25, colors.black),
+                           ]))
+    elements.append(t1)
+    elements.append(t)
+    # write the document to disk
+    doc.build(elements)
     return response
 
 
