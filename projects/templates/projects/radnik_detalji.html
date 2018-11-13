@@ -121,6 +121,10 @@
                         <th><font color="black" style="background-color:#eef707">Odmora</font></th>
                         <th><font color="black" style="background-color:#ed6a6a">Nedozvoljenog odsustva</font></th>
                         <th><font color="black">Radnih sati</font></th>
+                        <th><font color="black">Doprinosi</font></th>
+                        <th><font color="black">Smeštaj</font></th>
+                        <th><font color="black">Ishrana</font></th>
+                        <th><font color="black">Neto LD</font></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -149,6 +153,26 @@
                         {% endfor %}
                         {% for k, v in mesec.1.items %}
                         {% if k == 'radnih_sati' %}
+                        <td>{{ v }}</td>
+                        {% endif %}
+                        {% endfor %}
+                        {% for k, v in mesec.1.items %}
+                        {% if k == 'doprinosi' %}
+                        <td>{{ v }}</td>
+                        {% endif %}
+                        {% endfor %}
+                        {% for k, v in mesec.1.items %}
+                        {% if k == 'smestaj' %}
+                        <td>{{ v }}</td>
+                        {% endif %}
+                        {% endfor %}
+                        {% for k, v in mesec.1.items %}
+                        {% if k == 'ishrana' %}
+                        <td>{{ v }}</td>
+                        {% endif %}
+                        {% endfor %}
+                        {% for k, v in mesec.1.items %}
+                        {% if k == 'netoLD' %}
                         <td>{{ v }}</td>
                         {% endif %}
                         {% endfor %}
