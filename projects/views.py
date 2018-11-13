@@ -432,24 +432,27 @@ def pdf_radnici_mesecni_izvestaj(request, mesec, godina, posao_id):
     doc = SimpleDocTemplate(response)
     # container for the 'Flowable' objects
     elements = []
-    data = [['PREZIME I IME', 'RADNI SAT', 'BROJ RADNIH SATI', 'ISHRANA', 'AKONTACIJA', 'UKUPNO']]
+    data = [['br', 'PREZIME I IME', 'RADNI SAT', 'BROJ RADNIH SATI', 'ISHRANA', 'AKONTACIJA', 'UKUPNO']]
+    br_radnika = 1
     for posao in aktivni_poslovi:
         data.append([])
         data.append([posao.ime])
         for radnik in radnici:
             if radnik.posao == posao:
-                data.append([radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
+                data.append([br_radnika, radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
+                br_radnika += 1
 
     data.append([])
     data.append(['NERASPOREDJENI'])
     for radnik in radnici:
         if radnik.posao == None and radnik.u_radnom_odnosu:
-            data.append([radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
+            data.append([br_radnika, radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
+            br_radnika += 1
     data.append([])
-    data.append(['VAN RADNOG ODNOSA'])
-    for radnik in radnici:
-        if radnik.posao == None and not radnik.u_radnom_odnosu:
-            data.append([radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
+    # data.append(['VAN RADNOG ODNOSA'])
+    # for radnik in radnici:
+    #     if radnik.posao == None and not radnik.u_radnom_odnosu:
+    #         data.append([radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
     data.append([])
     data.append(['UKUPNO', '', '', '', '', svi])
     t = Table(data)
@@ -667,9 +670,12 @@ def mesecni_izvod_radnika(request, mesec, godina, posao_id):
             ishrana[radnik.id] = 0
         for dan in Dani:
             if dan.radnik.id in ukupno:
-                ukupno[dan.radnik.id] += (dan.radio_sati * dan.radnik.satnica) + dan.ishrana
+                ukupno[dan.radnik.id] += (dan.radio_sati * dan.radnik.satnica)
                 radnih_sati[dan.radnik.id] += dan.radio_sati
                 ishrana[dan.radnik.id] += dan.ishrana
+                # racunati ishranu u netoLD samo za nedelju
+                if dan.datum.weekday() == 6:
+                    ukupno[dan.radnik.id] += dan.ishrana
                 if dan.bolovanje:
                     dana_bolovanja[dan.radnik.id] += 1
                 if dan.dozvoljeno_odsustvo:
@@ -976,6 +982,7 @@ def radnik_detail(request, radnik_id):
         preostalo_dana = radnik.ugovor_vazi_do - current_date
         radnik.dana_do_isteka_ugovora = preostalo_dana.days
         svi_dani_radnika = Dan.objects.filter(radnik=radnik).order_by('datum')
+        doprinos = Doprinos.objects.get(pk=1).iznos
         # godine = {}
         # for dan in svi_dani_radnika:
         #     if dan.datum.year not in godine:
@@ -1005,11 +1012,21 @@ def radnik_detail(request, radnik_id):
                                                  'bolovanja': 0,
                                                  'odmora': 0,
                                                  'nedozvoljenog_odsustva': 0,
-                                                 'radnih_sati': 0.0}])
+                                                 'radnih_sati': 0.0,
+                                                 'doprinosi': 0.0,
+                                                 'smestaj': 0.0,
+                                                 'ishrana': 0.0,
+                                                 'netoLD': 0.0,
+                                                 'ishrana_nedelja': 0.0}])
             for mesec in meseci:
                 if mesec[0] == dan.datum.month:
                     dani = mesec[1]
+                    dana_u_mesecu = calendar.monthrange(dan.datum.year, dan.datum.month)[1]
+                    doprinos_za_dan = round(float(doprinos) / float(dana_u_mesecu), 2)
+            dani['doprinosi'] += doprinos_za_dan
             if not dan.datum.weekday() == 6:
+                dani['smestaj'] += dan.smestaj
+                dani['ishrana'] += dan.ishrana
                 if dan.bolovanje:
                     dani['bolovanja'] += 1
                 elif dan.dozvoljeno_odsustvo:
@@ -1020,6 +1037,10 @@ def radnik_detail(request, radnik_id):
                     if dan.radio_sati != 0:
                         dani['radnih_dana'] += 1
                         dani['radnih_sati'] += dan.radio_sati
+            else:
+                dani['ishrana_nedelja'] += dan.ishrana
+            if dan.datum.day == dana_u_mesecu:
+                dani['netoLD'] = dani['radnih_sati'] * radnik.satnica + dani['ishrana_nedelja']
 
 
 
