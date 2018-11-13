@@ -14,8 +14,12 @@ import datetime
 import calendar
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
+pdfmetrics.registerFont(TTFont('Verdana', 'Verdana.ttf'))
 
 def pdf_posao(request, posao_id):
     posao = Poslovi.objects.get(id=posao_id)
@@ -39,6 +43,7 @@ def pdf_posao(request, posao_id):
 
         # Create the PDF object, using the response object as its "file."
         p = canvas.Canvas(response)
+        p.setFont("Verdana", 8)
         # pagesize=(595.27,841.89)
         # Draw things on the PDF. Here's where the PDF generation happens.
         # See the ReportLab documentation for the full list of functionality.
@@ -175,6 +180,7 @@ def pdf_posao_mesecni_presek(request, posao_id, mesec, godina):
 
     # Create the PDF object, using the response object as its "file."
     p = canvas.Canvas(response)
+    p.setFont("Verdana", 8)
     # pagesize=(595.27,841.89)
     # Draw things on the PDF. Here's where the PDF generation happens.
     # See the ReportLab documentation for the full list of functionality.
@@ -351,10 +357,15 @@ def pdf_radnik(request, radnik_id):
     response['Content-Disposition'] = 'attachment; filename="{radnik}.pdf"'.format(radnik=radnik.ime)
 
     # Create the PDF object, using the response object as its "file."
+    style_sheet = getSampleStyleSheet()
+    style_sheet.add(ParagraphStyle(name='TestStyle',
+                                   fontName='Verdana',
+                                   fontSize=8,
+                                   leading=8))
     doc = SimpleDocTemplate(response)
     # container for the 'Flowable' objects
     elements = []
-    header = [[radnik.ime, radnik.oib, 'Pocetak radnog odnosa', radnik.poceo_raditi.strftime('%d.%m.%Y'), 'Ugovor istice', radnik.ugovor_vazi_do.strftime('%d.%m.%Y')]]
+    header = [[Paragraph(radnik.ime, style=style_sheet['TestStyle']), Paragraph(radnik.oib, style=style_sheet['TestStyle']), 'Pocetak radnog odnosa', radnik.poceo_raditi.strftime('%d.%m.%Y'), 'Ugovor istice', radnik.ugovor_vazi_do.strftime('%d.%m.%Y')]]
     # data.append(["Pocetak radnog odnosa: {pocetak}, Ugovor istice: {istice}".format(pocetak=radnik.poceo_raditi.strftime('%d.%m.%Y'), istice=radnik.ugovor_vazi_do.strftime('%d.%m.%Y'))])
     data = [['G-M', 'Radnih dana', 'Bolovanja', 'Odmora', 'Nedozvoljenog\nodsustva', 'Radnih sati', 'doprinosi', 'smestaj', 'ishrana', 'Neto LD']]
     for godina in godine:
@@ -417,6 +428,11 @@ def pdf_radnici_mesecni_izvestaj(request, mesec, godina, posao_id):
     response['Content-Disposition'] = 'attachment; filename="Izvestaj radnika za {mesec}_{godina}.pdf"'.format(mesec=mesec, godina=godina)
 
     # Create the PDF object, using the response object as its "file."
+    style_sheet = getSampleStyleSheet()
+    style_sheet.add(ParagraphStyle(name='TestStyle',
+                                   fontName='Verdana',
+                                   fontSize=8,
+                                   leading=8))
     doc = SimpleDocTemplate(response)
     # container for the 'Flowable' objects
     elements = []
@@ -424,17 +440,17 @@ def pdf_radnici_mesecni_izvestaj(request, mesec, godina, posao_id):
     br_radnika = 1
     for posao in aktivni_poslovi:
         data.append([])
-        data.append([posao.ime])
+        data.append([Paragraph(posao.ime, style=style_sheet['TestStyle'])])
         for radnik in radnici:
             if radnik.posao == posao:
-                data.append([br_radnika, radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
+                data.append([br_radnika, Paragraph(radnik.ime, style=style_sheet['TestStyle']), radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
                 br_radnika += 1
 
     data.append([])
     data.append(['NERASPOREDJENI'])
     for radnik in radnici:
         if radnik.posao == None and radnik.u_radnom_odnosu:
-            data.append([br_radnika, radnik.ime, radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
+            data.append([br_radnika, Paragraph(radnik.ime, style=style_sheet['TestStyle']), radnik.satnica, radnih_sati[radnik.id], ishrana[radnik.id], akontacije[radnik.id], ukupno[radnik.id]])
             br_radnika += 1
     data.append([])
     # data.append(['VAN RADNOG ODNOSA'])
