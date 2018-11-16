@@ -19,7 +19,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
-pdfmetrics.registerFont(TTFont('Verdana', 'Verdana.ttf'))
+# pdfmetrics.registerFont(TTFont('Verdana', 'Verdana.ttf'))
 
 def pdf_posao(request, posao_id):
     posao = Poslovi.objects.get(id=posao_id)
@@ -43,7 +43,7 @@ def pdf_posao(request, posao_id):
 
         # Create the PDF object, using the response object as its "file."
         p = canvas.Canvas(response)
-        p.setFont("Verdana", 8)
+        # p.setFont("Verdana", 8)
         # pagesize=(595.27,841.89)
         # Draw things on the PDF. Here's where the PDF generation happens.
         # See the ReportLab documentation for the full list of functionality.
@@ -180,7 +180,7 @@ def pdf_posao_mesecni_presek(request, posao_id, mesec, godina):
 
     # Create the PDF object, using the response object as its "file."
     p = canvas.Canvas(response)
-    p.setFont("Verdana", 8)
+    # p.setFont("Verdana", 8)
     # pagesize=(595.27,841.89)
     # Draw things on the PDF. Here's where the PDF generation happens.
     # See the ReportLab documentation for the full list of functionality.
@@ -359,7 +359,7 @@ def pdf_radnik(request, radnik_id):
     # Create the PDF object, using the response object as its "file."
     style_sheet = getSampleStyleSheet()
     style_sheet.add(ParagraphStyle(name='TestStyle',
-                                   fontName='Verdana',
+                                   # fontName='Verdana',
                                    fontSize=8,
                                    leading=8))
     doc = SimpleDocTemplate(response)
@@ -430,7 +430,7 @@ def pdf_radnici_mesecni_izvestaj(request, mesec, godina, posao_id):
     # Create the PDF object, using the response object as its "file."
     style_sheet = getSampleStyleSheet()
     style_sheet.add(ParagraphStyle(name='TestStyle',
-                                   fontName='Verdana',
+                                   # fontName='Verdana',
                                    fontSize=8,
                                    leading=8))
     doc = SimpleDocTemplate(response)
