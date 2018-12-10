@@ -409,9 +409,12 @@ def pdf_radnici_mesecni_izvestaj(request, mesec, godina, posao_id):
         akontacije[radnik.id] = 0
     for dan in Dani:
         if dan.radnik.id in ukupno:
-            ukupno[dan.radnik.id] += (dan.radio_sati * dan.radnik.satnica) + dan.ishrana
+            ukupno[dan.radnik.id] += (dan.radio_sati * dan.radnik.satnica)
             radnih_sati[dan.radnik.id] += dan.radio_sati
             ishrana[dan.radnik.id] += dan.ishrana
+            # racunati ishranu u netoLD samo za nedelju
+            if dan.datum.weekday() == 6:
+                ukupno[dan.radnik.id] += dan.ishrana
     for a in Akontacije_za_mesec:
         if a.radnik.id in ukupno:
             ukupno[a.radnik.id] -= a.kolicina
