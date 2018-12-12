@@ -1290,7 +1290,6 @@ def licni_dohodak_update(request, mesec, godina, posao_id, ld_id):
     if form.is_valid():
         ld = form.save(commit=False)
         ld.save()
-        dodat_ld = ld.kolicina - prethodni_ld
         try:
             rashod = Rashodi.objects.get(
                 vrsta="SATNICA_RADNIKA_{id}_{p}_{m}_{g}".format(p=ld.radnik.posao.ime, id=ld.radnik.posao.id, m=mesec,
@@ -1298,12 +1297,13 @@ def licni_dohodak_update(request, mesec, godina, posao_id, ld_id):
         except:
             pass
         try:
-            rashod.kolicina += dodat_ld
+            rashod.kolicina -= prethodni_ld
+            rashod.kolicina += ld.kolicina
         except:
             rashod = Rashodi()
             rashod.posao = ld.radnik.posao
-            rashod.kolicina = dodat_ld
-            rashod.datum = datetime.date.today()
+            rashod.kolicina = ld.kolicina
+            rashod.datum = datetime.datetime(int(godina), int(mesec), 01)
             rashod.vrsta = "SATNICA_RADNIKA_{id}_{p}_{m}_{g}".format(p=ld.radnik.posao.ime, id=ld.radnik.posao.id, m=mesec,
                                                                      g=godina)
         rashod.save()

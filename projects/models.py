@@ -154,7 +154,7 @@ class RucnoLD(models.Model):
         return self.radnik.ime
 
     class Meta:
-        verbose_name_plural = "Akontacije"
+        verbose_name_plural = "RucnoLD"
 
 class Komentar(models.Model):
     datum = models.DateField(null=True, blank=True)
@@ -180,3 +180,6 @@ class Komentar_za_vozilo(models.Model):
 
 class Doprinos(models.Model):
     iznos = models.FloatField()
+
+    class Meta:
+        verbose_name_plural = "Doprinosi"
