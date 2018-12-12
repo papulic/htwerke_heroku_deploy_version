@@ -330,7 +330,8 @@ def pdf_radnik(request, radnik_id):
                 dani = mesec[1]
                 dana_u_mesecu = calendar.monthrange(dan.datum.year, dan.datum.month)[1]
                 doprinos_za_dan = round(float(doprinos) / float(dana_u_mesecu), 2)
-        dani['doprinosi'] += doprinos_za_dan
+        if dan.doprinos_dodat:
+            dani['doprinosi'] += doprinos_za_dan
         if not dan.datum.weekday() == 6:
             dani['smestaj'] += dan.smestaj
             dani['ishrana'] += dan.ishrana
@@ -1030,7 +1031,8 @@ def radnik_detail(request, radnik_id):
                     dani = mesec[1]
                     dana_u_mesecu = calendar.monthrange(dan.datum.year, dan.datum.month)[1]
                     doprinos_za_dan = round(float(doprinos) / float(dana_u_mesecu), 2)
-            dani['doprinosi'] += doprinos_za_dan
+            if dan.doprinos_dodat:
+                dani['doprinosi'] += doprinos_za_dan
             if not dan.datum.weekday() == 6:
                 dani['smestaj'] += dan.smestaj
                 dani['ishrana'] += dan.ishrana
