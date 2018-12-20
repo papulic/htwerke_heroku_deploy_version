@@ -178,6 +178,38 @@
                         {% endfor %}
                     </tr>
                     {% endfor %}
+                    <tr>
+                        <td><strong>Ukupno:</strong></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        {% for k, v in godina.2.items %}
+                        {% if k == 'radnih_sati' %}
+                        <td>{{ v }}</td>
+                        {% endif %}
+                        {% endfor %}
+                        {% for k, v in godina.2.items %}
+                        {% if k == 'doprinosi' %}
+                        <td>{{ v }}</td>
+                        {% endif %}
+                        {% endfor %}
+                        {% for k, v in godina.2.items %}
+                        {% if k == 'smestaj' %}
+                        <td>{{ v }}</td>
+                        {% endif %}
+                        {% endfor %}
+                        {% for k, v in godina.2.items %}
+                        {% if k == 'ishrana' %}
+                        <td>{{ v }}</td>
+                        {% endif %}
+                        {% endfor %}
+                        {% for k, v in godina.2.items %}
+                        {% if k == 'netoLD' %}
+                        <td>{{ v }}</td>
+                        {% endif %}
+                        {% endfor %}
+                    </tr>
                     </tbody>
                 </table>
             {% endfor %}
