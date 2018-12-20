@@ -306,10 +306,15 @@ def pdf_radnik(request, radnik_id):
                 godina_postoji = True
                 break
         if not godina_postoji:
-            godine.append([dan.datum.year, []])
+            godine.append([dan.datum.year, [], {'radnih_sati': 0.0,
+                                                'doprinosi': 0.0,
+                                                'smestaj': 0.0,
+                                                'ishrana': 0.0,
+                                                'netoLD': 0.0}])
         for godina in godine:
             if godina[0] == dan.datum.year:
                 meseci = godina[1]
+                break
         for mesec in meseci:
             if mesec[0] == dan.datum.month:
                 mesec_postoji = True
@@ -332,9 +337,12 @@ def pdf_radnik(request, radnik_id):
                 doprinos_za_dan = round(float(doprinos) / float(dana_u_mesecu), 2)
         if dan.doprinos_dodat:
             dani['doprinosi'] += doprinos_za_dan
+            godina[2]['doprinosi'] += doprinos_za_dan
         if not dan.datum.weekday() == 6:
             dani['smestaj'] += dan.smestaj
+            godina[2]['smestaj'] += dan.smestaj
             dani['ishrana'] += dan.ishrana
+            godina[2]['ishrana'] += dan.ishrana
             if dan.bolovanje:
                 dani['bolovanja'] += 1
             elif dan.dozvoljeno_odsustvo:
@@ -345,10 +353,12 @@ def pdf_radnik(request, radnik_id):
                 if dan.radio_sati != 0:
                     dani['radnih_dana'] += 1
                     dani['radnih_sati'] += dan.radio_sati
+                    godina[2]['radnih_sati'] += dan.radio_sati
         else:
             dani['ishrana_nedelja'] += dan.ishrana
         if dan.datum.day == dana_u_mesecu:
             dani['netoLD'] = dani['radnih_sati'] * radnik.satnica + dani['ishrana_nedelja']
+            godina[2]['netoLD'] += dani['radnih_sati'] * radnik.satnica + dani['ishrana_nedelja']
 
 
     strana = 1
@@ -375,6 +385,7 @@ def pdf_radnik(request, radnik_id):
         data.append([])
         for mesec in godina[1]:
             data.append([meseci_u_godini[str(mesec[0])], mesec[1]['radnih_dana'], mesec[1]['bolovanja'], mesec[1]['odmora'], mesec[1]['nedozvoljenog_odsustva'], mesec[1]['radnih_sati'], mesec[1]['doprinosi'], mesec[1]['smestaj'], mesec[1]['ishrana'], mesec[1]['netoLD']])
+        data.append(["UKUPNO:   ", "", "", "", "", godina[2]['radnih_sati'], godina[2]['doprinosi'], godina[2]['smestaj'], godina[2]['ishrana'], godina[2]['netoLD']])
 
     t1 = Table(header)
     t = Table(data)
@@ -1007,10 +1018,15 @@ def radnik_detail(request, radnik_id):
                     godina_postoji = True
                     break
             if not godina_postoji:
-                godine.append([dan.datum.year, []])
+                godine.append([dan.datum.year, [], {'radnih_sati': 0.0,
+                                                    'doprinosi': 0.0,
+                                                    'smestaj': 0.0,
+                                                    'ishrana': 0.0,
+                                                    'netoLD': 0.0}])
             for godina in godine:
                 if godina[0] == dan.datum.year:
                     meseci = godina[1]
+                    break
             for mesec in meseci:
                 if mesec[0] == dan.datum.month:
                     mesec_postoji = True
@@ -1033,9 +1049,12 @@ def radnik_detail(request, radnik_id):
                     doprinos_za_dan = round(float(doprinos) / float(dana_u_mesecu), 2)
             if dan.doprinos_dodat:
                 dani['doprinosi'] += doprinos_za_dan
+                godina[2]['doprinosi'] += doprinos_za_dan
             if not dan.datum.weekday() == 6:
                 dani['smestaj'] += dan.smestaj
+                godina[2]['smestaj'] += dan.smestaj
                 dani['ishrana'] += dan.ishrana
+                godina[2]['ishrana'] += dan.ishrana
                 if dan.bolovanje:
                     dani['bolovanja'] += 1
                 elif dan.dozvoljeno_odsustvo:
@@ -1046,10 +1065,12 @@ def radnik_detail(request, radnik_id):
                     if dan.radio_sati != 0:
                         dani['radnih_dana'] += 1
                         dani['radnih_sati'] += dan.radio_sati
+                        godina[2]['radnih_sati'] += dan.radio_sati
             else:
                 dani['ishrana_nedelja'] += dan.ishrana
             if dan.datum.day == dana_u_mesecu:
                 dani['netoLD'] = dani['radnih_sati'] * radnik.satnica + dani['ishrana_nedelja']
+                godina[2]['netoLD'] += dani['radnih_sati'] * radnik.satnica + dani['ishrana_nedelja']
 
 
 
