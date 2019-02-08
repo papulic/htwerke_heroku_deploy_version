@@ -1,11 +1,11 @@
 {% extends 'projects/base.html' %}
-{% block title %} - Ljudi {% endblock %}
+{% block title %} - radnik_{{ radnik.ime }} {% endblock %}
 {% block content %}
 {% load staticfiles %}
 {% load widget_tweaks %}
 
 <div class="container">
-    <h3>Mesečni pregled za {{ mesec }}.{{ godina }}</h3>
+    <h3>Mesečni pregled za {{ mesec }}.{{ godina }} - {{ radnik.ime }}</h3>
     {% if messages %}
     <ul class="messages">
     {% for message in messages %}
@@ -29,28 +29,9 @@
         </div>
     </div>
     <br>
-    <div class="row">
-        <br>
-        <div class="col-sm-6">
-            <p>Pritiskom na dugme "Dodaj dane" kreiraju se svi dani koje radnik nema do današnjeg datuma, <strong>ZA SVAKOG RADNIKA</strong> koji je u radnom odnosu! To može malo potrajati, sačekajte povratnu poruku!</p>
-        </div>
-        <div class="col-sm-6">
-        <a href="{% url 'projects:dodaj_dane' mesec godina posao_id %}" style="float: right">
-            <button type="button" class="btn btn-warning">
-                <span class="glyphicon glyphicon-calendar"></span>&nbsp; Dodaj dane
-            </button>
-        </a>
-        </div>
-    </div>
-    <div class="row">
-        <a href="{% url 'projects:pdf_radnici_mesecni_izvestaj' mesec godina posao_id %}">
-            <button type="button" class="btn btn-info">
-                <span class="glyphicon glyphicon-pencil"></span>&nbsp; Napravi pdf izveštaj za {{ mesec }}.{{ godina }}
-            </button>
-        </a>
-    </div>
+
     <hr style="height:1px;border:none;color:#333;background-color:#333;" />
-    {% for radnik in radnici %}
+
     <table class="table" id="radnik{{ radnik.id }}">
         <thead>
         <tr>
@@ -73,7 +54,7 @@
         </thead>
         <tbody>
             <tr>
-                <td><a href="{% url 'projects:monthview-single' mesec godina radnik.id posao_id %}">
+                <td><a href="{% url 'projects:radnik-detail' radnik.id %}">
                         <button type="button" class="btn btn-link">
                             <span class="glyphicon glyphicon-user"></span>&nbsp; {{ radnik.ime }}
                         </button>
@@ -86,28 +67,26 @@
                 <td>{{ radnik.satnica }} kn</td>
                 <td>{% for a in akontacije %}
                     {% if a.radnik == radnik %}
+                    <a href="{% url 'projects:akontacija-update' mesec godina posao_id a.id %}">
                         <font color="black" {% if dan.datum.weekday == 6 %}style="color:red"{% endif %}><strong>
                         {{ a.kolicina }}
                         </strong></font>
+                    </a>
                     {% endif %}
                     {% endfor %}
                 </td>
                 <td>{% for l in licni_dohodci_za_mesec %}
                     {% if l.radnik == radnik %}
+                    <a href="{% url 'projects:licni_dohodak-update' mesec godina posao_id l.id %}">
                         <font color="black" {% if dan.datum.weekday == 6 %}style="color:red"{% endif %}><strong>
                         {{ l.kolicina }}
                         </strong></font>
+                    </a>
                     {% endif %}
                     {% endfor %}
                 </td>
-                {% for k, v in ishrana.items %}
-                {% if k == radnik.id %}
-                <td class="right-border">{{ v }}</td>
-                {% endif %}
-                {% endfor %}
-
+                <td class="right-border">{{ ishrana }}</td>
                 {% for dan in Dani %}
-                {% if dan.radnik == radnik %}
 
                 {% if dan.bolovanje %}
                 <td bgcolor="#07d3f7">
@@ -120,43 +99,33 @@
                 {% else %}
                 <td>
                 {% endif %}
+                    <a id="dan{{ dan.id }}" href="{% url 'projects:dan-update' dan.id posao_id %}">
                         <font color="black" {% if dan.datum.weekday == 6 %}style="color:red"{% endif %}><strong>
                         {{ dan.radio_sati }}
                         </strong></font>
+                    </a>
                 </td>
 
-                {% endif %}
                 {% endfor %}
-                {% for k, v in ukupno.items %}
-                {% if k == radnik.id %}
-                <td class="left-border"><strong>{{ v }}kn</strong></td>
-                {% endif %}
-                {% endfor %}
-                {% for k, v in radnih_sati.items %}
-                {% if k == radnik.id %}
-                <td><strong>{{ v }}</strong></td>
-                {% endif %}
-                {% endfor %}
-                {% for k, v in dana_bolovanja.items %}
-                {% if k == radnik.id %}
-                <td><strong>{{ v }}</strong></td>
-                {% endif %}
-                {% endfor %}
-                {% for k, v in slobodnih_dana.items %}
-                {% if k == radnik.id %}
-                <td><strong>{{ v }}</strong></td>
-                {% endif %}
-                {% endfor %}
+                <td class="left-border"><strong>{{ ukupno }}kn</strong></td>
+                <td><strong>{{ radnih_sati }}</strong></td>
+                <td><strong>{{ dana_bolovanja }}</strong></td>
+                <td><strong>{{ slobodnih_dana }}</strong></td>
             </tr>
 
 
         </tbody>
     </table>
     <hr style="height:1px;border:none;color:#333;background-color:#333;" />
-    {% endfor %}
-    <h4>Ukupno isplaćene akontacije: {{ sve_akontacije }}</h4>
-    <h3 style="float: right">Ukupno za isplatu: {{ svi }} kn</h3>
+    <div class="col-sm-6">
+        <a href="{% url 'projects:monthview-workers' mesec godina posao_id %}" style="float: right">
+            <button type="button" class="btn btn-warning">
+                <span class="glyphicon glyphicon-calendar"></span>&nbsp; Gotovo
+            </button>
+        </a>
+    </div>
 </div>
+
 
 
 {% endblock %}
