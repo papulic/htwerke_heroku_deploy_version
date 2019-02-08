@@ -667,10 +667,10 @@ def mesecni_izvod_radnika(request, mesec, godina, posao_id):
         return render(request, 'projects/login.html')
     else:
         if posao_id == 'SviPoslovi':
-            radnici = Radnik.objects.filter(u_radnom_odnosu=True)
+            radnici = Radnik.objects.all()
         else:
             posao = Poslovi.objects.get(id=posao_id)
-            radnici = Radnik.objects.filter(u_radnom_odnosu=True, posao=posao)
+            radnici = Radnik.objects.filter(posao=posao)
         Dani = Dan.objects.filter(datum__year=godina,
               datum__month=mesec).order_by('datum')
         Akontacije_za_mesec = Akontacije.objects.filter(mesec=mesec, godina=godina)
@@ -681,14 +681,17 @@ def mesecni_izvod_radnika(request, mesec, godina, posao_id):
         slobodnih_dana = {}
         ishrana = {}
         sve_akontacije = 0
+        dani_radnika = {}
         for radnik in radnici:
             ukupno[radnik.id] = 0
             dana_bolovanja[radnik.id] = 0
             radnih_sati[radnik.id] = 0
             slobodnih_dana[radnik.id] = 0
             ishrana[radnik.id] = 0
+            dani_radnika[radnik.id] = []
         for dan in Dani:
             if dan.radnik.id in ukupno:
+                dani_radnika[dan.radnik.id].append(dan)
                 ukupno[dan.radnik.id] += (dan.radio_sati * dan.radnik.satnica)
                 radnih_sati[dan.radnik.id] += dan.radio_sati
                 ishrana[dan.radnik.id] += dan.ishrana
@@ -712,7 +715,6 @@ def mesecni_izvod_radnika(request, mesec, godina, posao_id):
             'radnici': radnici,
             'mesec': mesec,
             'godina': godina,
-            'Dani': Dani,
             'ukupno': ukupno,
             'svi': svi,
             'dana_bolovanja': dana_bolovanja,
@@ -722,7 +724,8 @@ def mesecni_izvod_radnika(request, mesec, godina, posao_id):
             'akontacije': Akontacije_za_mesec,
             'ishrana': ishrana,
             'sve_akontacije': sve_akontacije,
-            'licni_dohodci_za_mesec': licni_dohodci_za_mesec
+            'licni_dohodci_za_mesec': licni_dohodci_za_mesec,
+            'dani_radnika': dani_radnika
         })
 
 def mesecni_izvod_single(request, mesec, godina, radnik_id, posao_id):
