@@ -13,6 +13,7 @@ urlpatterns = [
     url(r'^administracija/logout_user/$', views.logout_user, name='logout_user'),
     url(r'^administracija/novi_projekat/$', views.create_project, name='project-add'),
     url(r'^administracija/mesecni_pregled_radnika/(?P<mesec>[0-9]+)/(?P<godina>[0-9]+)/(?P<posao_id>[a-zA-Z0-9_.-]+)$', views.mesecni_izvod_radnika, name='monthview-workers'),  # samo string (?P<posao>[\w\-]+)
+    url(r'^administracija/mesecni_pregled_pojedinca/(?P<mesec>[0-9]+)/(?P<godina>[0-9]+)/(?P<radnik_id>[0-9]+)/(?P<posao_id>[a-zA-Z0-9_.-]+)$', views.mesecni_izvod_single, name='monthview-single'),
     url(r'^administracija/mesecni_pregled_poslova/(?P<od_meseca>[0-9]+)/(?P<do_meseca>[0-9]+)/(?P<godina>[0-9]+)$', views.mesecni_izvod_poslova, name='monthview-projects'),
     url(r'^administracija/posao/(?P<project_id>[0-9]+)/$', views.detail, name='posao'),
     url(r'^administracija/radnik/(?P<radnik_id>[0-9]+)/$', views.radnik_detail, name='radnik-detail'),

@@ -725,6 +725,55 @@ def mesecni_izvod_radnika(request, mesec, godina, posao_id):
             'licni_dohodci_za_mesec': licni_dohodci_za_mesec
         })
 
+def mesecni_izvod_single(request, mesec, godina, radnik_id, posao_id):
+    if not request.user.is_authenticated():
+        return render(request, 'projects/login.html')
+    else:
+        radnik = Radnik.objects.get(pk=radnik_id)
+        Dani = Dan.objects.filter(datum__year=godina,
+              datum__month=mesec, radnik=radnik).order_by('datum')
+        Akontacije_za_mesec = Akontacije.objects.filter(mesec=mesec, godina=godina, radnik=radnik)
+        licni_dohodci_za_mesec = RucnoLD.objects.filter(mesec=mesec, godina=godina, radnik=radnik)
+        ukupno = 0
+        dana_bolovanja = 0
+        radnih_sati = 0
+        slobodnih_dana = 0
+        ishrana = 0
+        sve_akontacije = 0
+        for dan in Dani:
+            ukupno += (dan.radio_sati * dan.radnik.satnica)
+            radnih_sati += dan.radio_sati
+            ishrana += dan.ishrana
+            # racunati ishranu u netoLD samo za nedelju
+            if dan.datum.weekday() == 6:
+                ukupno += dan.ishrana
+            if dan.bolovanje:
+                dana_bolovanja += 1
+            if dan.dozvoljeno_odsustvo:
+                slobodnih_dana += 1
+        for a in Akontacije_za_mesec:
+            ukupno -= a.kolicina
+            sve_akontacije += a.kolicina
+        for l in licni_dohodci_za_mesec:
+            ukupno += l.kolicina
+
+        return render(request, 'projects/mesecni_izvod_single.html', {
+            'radnik': radnik,
+            'mesec': mesec,
+            'godina': godina,
+            'Dani': Dani,
+            'ukupno': ukupno,
+            'dana_bolovanja': dana_bolovanja,
+            'radnih_sati': radnih_sati,
+            'slobodnih_dana': slobodnih_dana,
+            'akontacije': Akontacije_za_mesec,
+            'ishrana': ishrana,
+            'sve_akontacije': sve_akontacije,
+            'licni_dohodci_za_mesec': licni_dohodci_za_mesec,
+            'posao_id': posao_id
+        })
+
+
 
 def mesecni_izvod_poslova(request, od_meseca, do_meseca, godina):
     if not request.user.is_authenticated():
@@ -1275,7 +1324,8 @@ def dan_update(request, dan_id, posao_id):
                         if old_radio_sati != 0.0 and prihod.kolicina != dan.posao.dogovoreni_radni_sati * dan.radio_sati:
                             prihod.kolicina -= old_radio_sati * dan.posao.dogovoreni_radni_sati
                     prihod.save()
-        return HttpResponseRedirect(reverse('projects:monthview-workers', kwargs={'posao_id': posao_id,
+        return HttpResponseRedirect(reverse('projects:monthview-single', kwargs={'posao_id': posao_id,
+                                                                                 'radnik_id': dan.radnik.id,
                                                                                   'mesec': int(dan.datum.month),
                                                                                   'godina': int(dan.datum.year)
                                                                                   }) + '#dan{dan_id}'.format(dan_id=dan_id))
@@ -1293,7 +1343,8 @@ def akontacija_update(request, mesec, godina, posao_id, akontacija_id):
     if form.is_valid():
         akontacija = form.save(commit=False)
         akontacija.save()
-        return HttpResponseRedirect(reverse('projects:monthview-workers', kwargs={'posao_id': posao_id,
+        return HttpResponseRedirect(reverse('projects:monthview-single', kwargs={'posao_id': posao_id,
+                                                                                 'radnik_id': instance.radnik.id,
                                                                                   'mesec': int(mesec),
                                                                                   'godina': int(godina)
                                                                                   }))
@@ -1328,7 +1379,8 @@ def licni_dohodak_update(request, mesec, godina, posao_id, ld_id):
             rashod.vrsta = "SATNICA_RADNIKA_{id}_{p}_{m}_{g}".format(p=ld.radnik.posao.ime, id=ld.radnik.posao.id, m=mesec,
                                                                      g=godina)
         rashod.save()
-        return HttpResponseRedirect(reverse('projects:monthview-workers', kwargs={'posao_id': posao_id,
+        return HttpResponseRedirect(reverse('projects:monthview-single', kwargs={'posao_id': posao_id,
+                                                                                  'radnik_id': instance.radnik.id,
                                                                                   'mesec': int(mesec),
                                                                                   'godina': int(godina)
                                                                                   }))
