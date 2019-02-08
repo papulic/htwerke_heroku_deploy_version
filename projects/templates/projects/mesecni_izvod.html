@@ -3,6 +3,7 @@
 {% block content %}
 {% load staticfiles %}
 {% load widget_tweaks %}
+{% load app_filters %}
 
 <div class="container">
     <h3>Mesečni pregled za {{ mesec }}.{{ godina }}</h3>
@@ -51,6 +52,7 @@
     </div>
     <hr style="height:1px;border:none;color:#333;background-color:#333;" />
     {% for radnik in radnici %}
+    {% if dani_radnika|get_value_from_dict:radnik.id %}
     <table class="table" id="radnik{{ radnik.id }}">
         <thead>
         <tr>
@@ -60,10 +62,10 @@
             <th>Akontacija</th>
             <th>RucnoLD</th>
             <th class="right-border">Ishrana</th>
-            {% for dan in Dani %}
-                {% if dan.radnik == radnik %}
+            {% for dan in dani_radnika|get_value_from_dict:radnik.id %}
+
                 <th {% if dan.datum.weekday == 6 %}style="color:red"{% endif %}>{{ dan.datum.day }}</th>
-                {% endif %}
+
                 {% endfor %}
             <th class="left-border">Neto LD</th>
             <th>Radnih sati</th>
@@ -100,14 +102,10 @@
                     {% endif %}
                     {% endfor %}
                 </td>
-                {% for k, v in ishrana.items %}
-                {% if k == radnik.id %}
-                <td class="right-border">{{ v }}</td>
-                {% endif %}
-                {% endfor %}
 
-                {% for dan in Dani %}
-                {% if dan.radnik == radnik %}
+                <td class="right-border">{{ ishrana|get_value_from_dict:radnik.id }}</td>
+
+                {% for dan in dani_radnika|get_value_from_dict:radnik.id %}
 
                 {% if dan.bolovanje %}
                 <td bgcolor="#07d3f7">
@@ -124,35 +122,18 @@
                         {{ dan.radio_sati }}
                         </strong></font>
                 </td>
-
-                {% endif %}
                 {% endfor %}
-                {% for k, v in ukupno.items %}
-                {% if k == radnik.id %}
-                <td class="left-border"><strong>{{ v }}kn</strong></td>
-                {% endif %}
-                {% endfor %}
-                {% for k, v in radnih_sati.items %}
-                {% if k == radnik.id %}
-                <td><strong>{{ v }}</strong></td>
-                {% endif %}
-                {% endfor %}
-                {% for k, v in dana_bolovanja.items %}
-                {% if k == radnik.id %}
-                <td><strong>{{ v }}</strong></td>
-                {% endif %}
-                {% endfor %}
-                {% for k, v in slobodnih_dana.items %}
-                {% if k == radnik.id %}
-                <td><strong>{{ v }}</strong></td>
-                {% endif %}
-                {% endfor %}
+                <td class="left-border"><strong>{{ ukupno|get_value_from_dict:radnik.id }}kn</strong></td>
+                <td><strong>{{ radnih_sati|get_value_from_dict:radnik.id }}</strong></td>
+                <td><strong>{{ dana_bolovanja|get_value_from_dict:radnik.id }}</strong></td>
+                <td><strong>{{ slobodnih_dana|get_value_from_dict:radnik.id }}</strong></td>
             </tr>
 
 
         </tbody>
     </table>
     <hr style="height:1px;border:none;color:#333;background-color:#333;" />
+    {% endif %}
     {% endfor %}
     <h4>Ukupno isplaćene akontacije: {{ sve_akontacije }}</h4>
     <h3 style="float: right">Ukupno za isplatu: {{ svi }} kn</h3>
