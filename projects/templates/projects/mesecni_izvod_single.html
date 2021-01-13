@@ -64,7 +64,7 @@
                 {% else %}
                 ---------
                 {% endif %}</td>
-                <td>{{ radnik.satnica }} kn</td>
+                <td>{{ radnik.satnica }} eur</td>
                 <td>{% for a in akontacije %}
                     {% if a.radnik == radnik %}
                     <a href="{% url 'projects:akontacija-update' mesec godina posao_id a.id %}">
@@ -107,7 +107,7 @@
                 </td>
 
                 {% endfor %}
-                <td class="left-border"><strong>{{ ukupno }}kn</strong></td>
+                <td class="left-border"><strong>{{ ukupno }}eur</strong></td>
                 <td><strong>{{ radnih_sati }}</strong></td>
                 <td><strong>{{ dana_bolovanja }}</strong></td>
                 <td><strong>{{ slobodnih_dana }}</strong></td>

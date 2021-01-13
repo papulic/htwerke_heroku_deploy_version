@@ -85,7 +85,7 @@
                 {% else %}
                 ---------
                 {% endif %}</td>
-                <td>{{ radnik.satnica }} kn</td>
+                <td>{{ radnik.satnica }} eur</td>
                 <td>{% for a in akontacije %}
                     {% if a.radnik == radnik %}
                         <font color="black" {% if dan.datum.weekday == 6 %}style="color:red"{% endif %}><strong>
@@ -123,7 +123,7 @@
                         </strong></font>
                 </td>
                 {% endfor %}
-                <td class="left-border"><strong>{{ ukupno|get_value_from_dict:radnik.id }}kn</strong></td>
+                <td class="left-border"><strong>{{ ukupno|get_value_from_dict:radnik.id }}eur</strong></td>
                 <td><strong>{{ radnih_sati|get_value_from_dict:radnik.id }}</strong></td>
                 <td><strong>{{ dana_bolovanja|get_value_from_dict:radnik.id }}</strong></td>
                 <td><strong>{{ slobodnih_dana|get_value_from_dict:radnik.id }}</strong></td>
@@ -136,7 +136,7 @@
     {% endif %}
     {% endfor %}
     <h4>Ukupno isplaćene akontacije: {{ sve_akontacije }}</h4>
-    <h3 style="float: right">Ukupno za isplatu: {{ svi }} kn</h3>
+    <h3 style="float: right">Ukupno za isplatu: {{ svi }} eur</h3>
 </div>
 
 
